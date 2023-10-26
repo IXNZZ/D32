@@ -1,11 +1,13 @@
-use std::arch::aarch64::float32x2_t;
+use std::time::{Duration, Instant};
 use ggez::Context;
-use ggez::glam::vec2;
-use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect};
+use ggez::glam::{vec2, Vec2};
+use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, InstanceArray, Mesh, Rect, ScreenImage, StrokeOptions, Text};
+use keyframe::mint::Point2;
 use tracing::error;
-use crate::{asset, cache_1};
+use crate::{asset};
 use crate::asset::Tile;
 use crate::cache::{CacheKey, ImageCache};
+use crate::easing::{Easing, EasingStatus, Rect2};
 // use crate::cache_1::ImageCacheManager;
 
 #[derive(Debug)]
@@ -20,7 +22,6 @@ pub struct MapTileSet {
     object_key: CacheKey,
 }
 
-#[derive(Default)]
 pub struct MapLayer {
     map_dir: String,
     map_name: String,
@@ -38,6 +39,7 @@ pub struct MapLayer {
     tiles: Vec<Tile>,
     reload: bool,
     current_tile_set: Vec<MapTileSet>,
+    easing: Easing<Rect2>
 }
 
 impl MapLayer {
@@ -60,6 +62,7 @@ impl MapLayer {
             tiles: Vec::new(),
             reload: true,
             current_tile_set: Vec::new(),
+            easing: Easing::new(Rect2::default(), Rect2::default(), 1.)
         };
         this.reload_map_data();
         this
@@ -112,12 +115,17 @@ impl MapLayer {
         }
     }
 
+    pub fn update_move_pixel(&mut self, time: f64) {
+
+    }
+
     fn build_map_window(&mut self, cache: &mut ImageCache, layer: i32) {
         let max_width = self.max_tile_width + 4;
-        let max_height = self.max_tile_height + 10;
+        let max_height = self.max_tile_height + 12;
         let start_x = self.current_tile_x - self.max_tile_width / 2 - 2;
         let start_y = self.current_tile_y - self.max_tile_height / 2 - 2;
         let mut sets: Vec<MapTileSet> = Vec::new();
+        println!("max w: {}, h: {}, start x: {}, y: {}", max_width, max_height, start_x, start_y);
         for w in 0..max_width {
             for h in 0..max_height {
                 if w + start_x < 0 || w + start_x >= self.tile_height || h + start_y < 0 || h + start_y >= self.tile_width {
@@ -128,7 +136,15 @@ impl MapLayer {
                 let even = (w + start_x) & 0x1 != 1 && (h + start_y) & 0x1 != 1;
                 // cache::build_cache_key()
 
-                println!("even: {even}, p: {p}, w: {w}, h: {h}, start_x: {start_x}, start_y: {start_y}, tile: {:?}", tile);
+                // println!("even: {even}, p: {p}, w: {w}, h: {h}, start_x: {start_x}, start_y: {start_y}, tile: {:?}", tile);
+
+                let back_idx = (tile.back as u32 & 0x7FFF);
+                let middle_idx = (tile.middle as u32 & 0x7FFF);
+                let object_idx = (tile.objects as u32 & 0x7FFF);
+                let back_idx = if back_idx > 0 { back_idx - 1 } else { 0 };
+                let middle_idx = if middle_idx > 0 { middle_idx - 1 } else { 0 };
+                let object_idx = if object_idx > 0 { object_idx - 1 } else { 0 };
+
 
                 sets.push(MapTileSet {
                     layer: layer + w,
@@ -136,23 +152,22 @@ impl MapLayer {
                     tile: tile.clone(),
                     x: w as f32 * 48.,
                     y: h as f32 * 32.,
-                    back_key: CacheKey::from(self.data_id, self.data_number + 0, 2, 1, 1, tile.back_idx as u32 + 1, (tile.back & 0x7FFF) as u32),
-                    middle_key: CacheKey::from(self.data_id, self.data_number + 1, 2, 1, 2, tile.middle_idx as u32 + 1, (tile.middle & 0x7FFF) as u32),
-                    object_key: CacheKey::from(self.data_id, self.data_number + 2, 2, 1, 3, tile.objects_idx as u32 + 1, (tile.objects & 0x7FFF) as u32),
+                    back_key: CacheKey::from(self.data_id, self.data_number + 0, 2, 1, 1, tile.back_idx as u32 + 1, back_idx),
+                    middle_key: CacheKey::from(self.data_id, self.data_number + 1, 2, 1, 2, tile.middle_idx as u32 + 1, middle_idx),
+                    object_key: CacheKey::from(self.data_id, self.data_number + 2, 2, 1, 3, tile.objects_idx as u32 + 1, object_idx),
                 })
             }
         }
-
         let back_keys = sets.iter().filter(|x| x.even && (x.tile.back & 0x7FFF) > 0).map(|t| {
-            CacheKey::new(t.back_key.get_long_key() - 1)
+            t.back_key
         }).collect::<Vec<CacheKey>>();
         let middle_keys = sets.iter().filter(|x| (x.tile.middle & 0x7FFF) > 0).map(|t| {
-            CacheKey::new(t.middle_key.get_long_key() - 1)
+            t.middle_key
         }).collect::<Vec<CacheKey>>();
         let object_keys = sets.iter().filter(|x| (x.tile.objects & 0x7FFF) > 0).map(|t| {
-            CacheKey::new(t.object_key.get_long_key() - 1)
+            t.object_key
         }).collect::<Vec<CacheKey>>();
-        println!("back keys len: {}", back_keys.len());
+        // println!("back keys len: {}", back_keys.len());
         cache.load_keys(back_keys.as_slice());
         cache.load_keys(middle_keys.as_slice());
         cache.load_keys(object_keys.as_slice());
@@ -165,38 +180,87 @@ impl MapLayer {
             self.reload = false;
             self.build_map_window(cache, layer);
         }
+
+        let time = Instant::now();
+        // let image = ScreenImage::new(ctx, None, 1., 1., 1).image(ctx);
+        // let mut text_canvas = Canvas::from_image(ctx, image.clone(), None);
+
+
         let rel_offset_x = (self.absolute_offset_x as i32 % 48) as f32;
         let rel_offset_y = (self.absolute_offset_y as i32 % 32) as f32;
         let back_data_key = CacheKey::build_data_key(self.data_id, self.data_number, 2);
-        let middle_data_key = CacheKey::build_data_key(self.data_id, self.data_number + 1, 2);
+
+        let dest = DrawParam::default().dest(vec2(-2. * 48., -2. * 32.));
+
         if let Some(value) = cache.get(ctx, &back_data_key) {
             // println!("value: {}", value.)
+            let image_width = value.image().width() as f32;
+            let image_height = value.image().height() as f32;
             let mut array = InstanceArray::new(ctx, value.image());
             array.set(self.current_tile_set
                 .iter()
                 .filter(|t|t.even)
-                .filter(|t|value.meta(t.back_key.get_meta_key()).is_some())
+                .filter(|t|{
+                    // if value.meta(t.back_key.get_meta_key()).is_none() {
+                    //     println!("t: {:?}", t);
+                    // }
+                    value.meta(t.back_key.get_meta_key()).is_some()
+                })
                 .map(|t|{
                     let meta = value.meta(t.back_key.get_meta_key()).unwrap();
-                    println!("x: {}, y: {}, meta: {:?}", meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y, meta);
-                    DrawParam::default().src(Rect::new(meta.src_x, meta.src_y, meta.width as f32, meta.height as f32))
-                        .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y)).z(0xFF)
+                    // let mesh = Mesh::new_rectangle(ctx, DrawMode::Stroke(StrokeOptions::default()), Rect::new_i32(0, 0, 96, 64), Color::RED).unwrap();
+                    // text_canvas.draw(&Text::new(format!("src:{}|{}\ndst:{}|{}", meta.src_x, meta.src_y, meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y)),
+                    //                  DrawParam::default().src(Rect::new(meta.src_x, meta.src_y, meta.width as f32, meta.height as f32))
+                    //     .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y)));
+                    // text_canvas.draw(&mesh, DrawParam::default().src(Rect::new(meta.src_x, meta.src_y, meta.width as f32, meta.height as f32))
+                    //                      .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y)));
+                    // println!("x: {}, y: {}, meta: {:?}", meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y, meta);
+                    DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
+                        .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y))
             }));
-            canvas.draw(&array, DrawParam::default());
+            // text_canvas.finish(ctx).unwrap();
+            canvas.draw(&array, dest);
+            // canvas.draw(&image, DrawParam::default());
             // canvas.draw(&value.image(), DrawParam::default());
         }
-
-        // if let Some(value) = cache.get(ctx, &middle_data_key) {
-        //     let mut array = InstanceArray::new(ctx, value.image());
-        //     array.set(self.current_tile_set
-        //         .iter()
-        //         .filter(|t|value.meta(t.middle_key.get_meta_key()).is_some())
-        //         .map(|t|{
-        //             let meta = value.meta(t.middle_key.get_meta_key()).unwrap();
-        //             DrawParam::default().src(Rect::new(meta.src_x, meta.src_y, meta.width as f32, meta.height as f32))
-        //                 .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y))
-        //         }));
-        //     canvas.draw(&array, DrawParam::default());
+        // println!("draw back: {:?}", time.elapsed());
+        let middle_data_key = CacheKey::build_data_key(self.data_id, self.data_number + 1, 2);
+        if let Some(value) = cache.get(ctx, &middle_data_key) {
+            let mut array = InstanceArray::new(ctx, value.image());
+            let image_width = value.image().width() as f32;
+            let image_height = value.image().height() as f32;
+            array.set(self.current_tile_set
+                .iter()
+                .filter(|t|value.meta(t.middle_key.get_meta_key()).is_some())
+                .map(|t|{
+                    let meta = value.meta(t.middle_key.get_meta_key()).unwrap();
+                    DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
+                        .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y))
+                }));
+            canvas.draw(&array, dest);
+        }
+        // println!("draw middle: {:?}", time.elapsed());
+        let object_data_key = CacheKey::build_data_key(self.data_id, self.data_number + 2, 2);
+        if let Some(value) = cache.get(ctx, &object_data_key) {
+            let mut array = InstanceArray::new(ctx, value.image());
+            let image_width = value.image().width() as f32;
+            let image_height = value.image().height() as f32;
+            array.set(self.current_tile_set
+                .iter()
+                .filter(|t|value.meta(t.object_key.get_meta_key()).is_some())
+                .map(|t|{
+                    let meta = value.meta(t.object_key.get_meta_key()).unwrap();
+                    DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
+                        .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - meta.height as f32))
+                }));
+            canvas.draw(&array, dest);
+        }
+        // println!("draw objects: {:?}", time.elapsed());
+        // if let Some(value) = cache.get(ctx, &back_data_key) {
+        //     // let rect = Rect::new(0., 0., 96. / value.image().width() as f32, 64. / value.image().height() as f32);
+        //     // canvas.draw(&value.image(), DrawParam::new().src(rect).dest(vec2(100., 100.)))
         // }
+
+
     }
 }

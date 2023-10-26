@@ -13,6 +13,7 @@ mod cache_1;
 mod test_cache;
 mod layer;
 mod cache;
+mod easing;
 
 struct LocalTimer;
 
@@ -43,11 +44,11 @@ fn main() -> GameResult {
     let cb = ggez::ContextBuilder::new("D32", "iX")
         .add_resource_path(resource_dir)
         .window_setup(WindowSetup::default().title("D32"))
-        .window_mode(WindowMode::default().dimensions(1680.0, 1050.0));
+        .window_mode(WindowMode::default().dimensions(1920.0, 1280.0));
 
     let (mut ctx, event_loop) = cb.build()?;
 
-    let app = TestCacheApp::new("/Users/vinter/Dev/Mir2/", &mut ctx);
+    let app = TestCacheApp::new("/Users/vt/Documents/LegendOfMir/", &mut ctx);
 
     event::run(ctx, event_loop, app)
 }
