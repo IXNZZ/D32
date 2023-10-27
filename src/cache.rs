@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::{sync, thread};
 use std::ops::{Deref, Index};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
@@ -103,7 +103,7 @@ pub struct ImageCache {
 
 impl ImageCache {
 
-    pub fn new(data_dir: String) -> Self {
+    pub fn new(data_dir: PathBuf) -> Self {
         let key_image = Cache::builder().time_to_idle(Duration::from_secs(5 * 60)).build();
         let key_mark = Cache::builder().time_to_idle(Duration::from_secs(5 * 60)).build();
         // let temp_image = Cache::builder().time_to_live(Duration::from_secs(1 * 60)).build();
@@ -130,7 +130,7 @@ impl ImageCache {
         thread::spawn(move || {
             loop {
                 if let Ok(keys) = receiver.recv() {
-                    draw_image(&mut index, &mut m, &mut k, sender.clone(), keys, &n, data_dir.as_str())
+                    draw_image(&mut index, &mut m, &mut k, sender.clone(), keys, &n, data_dir.clone())
                 }
             }
         });
@@ -182,13 +182,13 @@ impl ImageCache {
     }
 }
 
-fn draw_image(index: &mut HashMap<u32, Vec<u32>>,
+fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
               key_mark: &mut Cache<CacheDataKey, ImageMark>,
               cache: &mut Cache<CacheDataKey, Arc<ImageValue>>,
               sender: Sender<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>,
               keys: Vec<CacheKey>,
     names: &Cache<u32, String>,
-    data_dir: &str) {
+    data_dir: T) {
     let mut key_vec: Vec<CacheKey> = Vec::new();
     for key in keys {
         for count in 0..key.get_data_count() {
@@ -211,7 +211,7 @@ fn draw_image(index: &mut HashMap<u32, Vec<u32>>,
                 ImageMark::new(2000, 2000)
             };
             let md = group.filter(|key| !is_exists(key)).map(|key| {
-                let data = load_image0(index, key, names, data_dir);
+                let data = load_image0(index, key, names, &data_dir);
                 let meta = mark.update(key, &data);
                 (meta, data)
             }).collect::<Vec<(ImageMeta, ImageData)>>();
@@ -222,7 +222,7 @@ fn draw_image(index: &mut HashMap<u32, Vec<u32>>,
 
 }
 
-fn load_image0(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey, names: &Cache<u32, String>, data_dir: &str) -> ImageData {
+fn load_image0<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey, names: &Cache<u32, String>, data_dir: T) -> ImageData {
     let data_type = key.get_data_type();
     let file_idx = key.get_file_index();
     //如果没有找到名称映射表
@@ -233,19 +233,19 @@ fn load_image0(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey, names: &Cache<
     let path = names.get(&key.get_file_id()).unwrap();
 
     if !index.contains_key(&key.get_idx_key()) {
-        let path = get_file_name(data_dir, path.as_str(), key.get_file_number(), data_type);
+        let path = get_file_name(&data_dir, path.as_str(), key.get_file_number(), data_type);
         if path.is_none() {
             error!("按类型映射文件类型出错(0,1,2): {}", data_type);
             return ImageData::default();
         }
         let path = path.unwrap();
         if key.get_idx_key() == 1 {
-            index.insert(key.get_idx_key(), asset::read_index(path.as_str()));
+            index.insert(key.get_idx_key(), asset::read_index(path));
         } else {
-            index.insert(key.get_idx_key(), asset::read_wzx(path.as_str()));
+            index.insert(key.get_idx_key(), asset::read_wzx(path));
         }
     }
-    let path = get_file_name(data_dir, path.as_str(), key.get_file_number(), 0);
+    let path = get_file_name(&data_dir, path.as_str(), key.get_file_number(), 0);
     if path.is_none() {
         error!("按类型映射文件类型出错(0,1,2): {}", data_type);
         return ImageData::default();
@@ -260,7 +260,7 @@ fn load_image0(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey, names: &Cache<
         let end = if end.is_some() && data_type == 1 {
             *end.unwrap()
         } else { 16 };
-        return if let Some(img) = asset::read_image(path.as_str(), *start.unwrap(), end + *start.unwrap()) {
+        return if let Some(img) = asset::read_image(path, *start.unwrap(), end + *start.unwrap()) {
             img
         } else {
             ImageData::default()
@@ -270,21 +270,22 @@ fn load_image0(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey, names: &Cache<
     ImageData::default()
 }
 
-fn get_file_name(dir: &str, file_name: &str, file_number: u32, data_type: u32) -> Option<String> {
+fn get_file_name<T: AsRef<Path>>(dir: &T, file_name: &str, file_number: u32, data_type: u32) -> Option<PathBuf> {
     let name = if file_number > 1 {
-        format!("{}/{}{}", dir, file_name, file_number)
+        format!("{}{}", file_name, file_number)
     } else {
-        format!("{}/{}", dir, file_name)
+        file_name.to_lowercase()
     };
+
     match data_type {
         1 => {
-            Some(format!("{}.idx", name))
+            Some(dir.as_ref().join(name).with_extension("idx"))
         },
         2 => {
-            Some(format!("{}.wzx", name))
+            Some(dir.as_ref().join(name).with_extension("wzx"))
         },
         0 => {
-            Some(format!("{}.wzl", name))
+            Some(dir.as_ref().join(name).with_extension("wzl"))
         }
         _ => {
             None

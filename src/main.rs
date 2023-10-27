@@ -1,6 +1,7 @@
 use std::{env, path};
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::{event, GameResult};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
@@ -11,9 +12,10 @@ mod asset;
 // mod cache_bak;
 mod cache_1;
 mod test_cache;
-mod layer;
+mod draw;
 mod cache;
 mod easing;
+mod control;
 
 struct LocalTimer;
 
@@ -25,7 +27,7 @@ impl FormatTime for LocalTimer {
 
 fn main() -> GameResult {
     if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "error,file=info,map_dist=debug")
+        std::env::set_var("RUST_LOG", "error,D32=info,map_dist=debug")
     }
     tracing_subscriber::fmt::fmt()
         .with_timer(LocalTimer)
@@ -33,22 +35,20 @@ fn main() -> GameResult {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let resource_dir = if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
-        let mut path = path::PathBuf::from(manifest_dir);
-        path.push("resources");
-        path
+    let resource_dir = if let Ok(manifest_dir) = env::var("GAME_DIR") {
+        path::PathBuf::from(manifest_dir)
     } else {
-        path::PathBuf::from("./resources")
+        path::PathBuf::from("./")
     };
-
+    info!("RUN DIR: {:?}", resource_dir);
     let cb = ggez::ContextBuilder::new("D32", "iX")
-        .add_resource_path(resource_dir)
+        .add_resource_path(resource_dir.clone())
         .window_setup(WindowSetup::default().title("D32"))
         .window_mode(WindowMode::default().dimensions(1920.0, 1280.0));
 
     let (mut ctx, event_loop) = cb.build()?;
 
-    let app = TestCacheApp::new("/Users/vt/Documents/LegendOfMir/", &mut ctx);
+    let app = TestCacheApp::new(&resource_dir, &mut ctx);
 
     event::run(ctx, event_loop, app)
 }

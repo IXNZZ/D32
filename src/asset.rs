@@ -1,5 +1,7 @@
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::path::Path;
 use bytes::{Buf, Bytes};
 use flate2::{FlushDecompress, Status};
 use tracing::{error, warn};
@@ -88,10 +90,10 @@ impl ImageData {
     }
 }
 
-pub fn read_map_file(path: &str) -> Option<MapData> {
-    let file =File::open(path);
+pub fn read_map_file<P: AsRef<Path> + Debug>(path: P) -> Option<MapData> {
+    let file =File::open(&path);
     if file.is_err() {
-        error!("未找到地图文件: {}", path);
+        error!("未找到地图文件: {:?}", path);
         return None;
     }
     let mut file = file.unwrap();
@@ -115,11 +117,11 @@ pub fn read_map_file(path: &str) -> Option<MapData> {
     Some(MapData {width, height, tiles})
 }
 
-pub fn read_image(path: &str, start: u32, end: u32) -> Option<ImageData> {
+pub fn read_image<P: AsRef<Path> + Debug>(path: P, start: u32, end: u32) -> Option<ImageData> {
     // debug!("S1 start: {}, end: {}, len: , path: {}", start, end, path);
-    let file =File::open(path);
+    let file =File::open(&path);
     if file.is_err() {
-        error!("未找到资源文件: {}", path);
+        error!("未找到资源文件: {:?}", path);
         return None;
     }
     let file = file.unwrap();
@@ -140,10 +142,10 @@ pub fn read_image(path: &str, start: u32, end: u32) -> Option<ImageData> {
     Some(ImageData::from(&data[..]))
 }
 
-pub fn read_index(path: &str) -> Vec<u32> {
-    let file =File::open(path);
+pub fn read_index<P: AsRef<Path> + Debug>(path: P) -> Vec<u32> {
+    let file =File::open(&path);
     if file.is_err() {
-        error!("未找到索引文件: {}", path);
+        error!("未找到索引文件: {:?}", path);
         return Vec::new();
     }
     let mut file = file.unwrap();
@@ -159,10 +161,11 @@ pub fn read_index(path: &str) -> Vec<u32> {
     result
 }
 
-pub fn read_wzx(path: &str) -> Vec<u32> {
+pub fn read_wzx<P: AsRef<Path> + Debug>(path: P) -> Vec<u32> {
     // println!("read_wzx {}", path);
-    let file = File::open(path);
+    let file = File::open(&path);
     if !file.is_ok() {
+        error!("未找到索引文件: {:?}", path);
         return vec![48];
     }
     let mut file = file.unwrap();

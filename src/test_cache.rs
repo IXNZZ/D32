@@ -1,22 +1,24 @@
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::time::Instant;
 use ggez::event::{EventHandler, MouseButton};
 use ggez::{Context, GameError};
 use ggez::graphics::{Canvas, Color, DrawParam};
 use crate::cache;
-use crate::layer;
-use crate::layer::map::MapLayer;
+use crate::draw;
+use crate::draw::map::MapDraw;
 // use crate::cache_1::ImageCacheManager;
 
 pub struct TestCacheApp {
     cache: cache::ImageCache,
-    map_layer: layer::map::MapLayer,
+    map_layer: MapDraw,
     center_x: f32,
     center_y: f32,
 }
 
 impl TestCacheApp {
-    pub fn new(base_dir: &str, ctx: &mut Context) -> Self {
+    pub fn new(path: &PathBuf, ctx: &mut Context) -> Self {
+        // ctx.fs.resources_dir()
         let scale_factor = ctx.gfx.window().scale_factor();
         let size = ctx.gfx.window().inner_size();
         let (draw_width, draw_height) = ctx.gfx.drawable_size();
@@ -29,10 +31,13 @@ impl TestCacheApp {
         // if new_width < monitor_size.width as f64 && new_height < monitor_size.height as f64 {
         //     ctx.gfx.set_drawable_size(new_width as f32, new_height as f32).unwrap();
         // }
-        let mut map = MapLayer::new((base_dir.to_lowercase() + "map").as_str(), 10, 1, "n3", "测试", draw_width, draw_height);
+        // println!("{:?}", ctx.fs.user_config_dir());
+        // println!("{:?}", ctx.fs.user_data_dir());
+        // println!("{:?}", ctx.fs.resources_dir());
+        let mut map = MapDraw::new(&path, 10, 1, "n3", "测试", draw_width, draw_height);
         map.jump_by_tile(333, 333, 0, 0);
         TestCacheApp {
-            cache: cache::ImageCache::new(base_dir.to_lowercase() + "data"),
+            cache: cache::ImageCache::new(path.join("data")),
             map_layer: map,
             center_x: draw_width / 2.,
             center_y: draw_height / 2.,
@@ -62,6 +67,7 @@ impl EventHandler<GameError> for TestCacheApp {
         let mut canvas = Canvas::from_frame(ctx, Color::new(0.1, 0.2, 0.3, 1.0));
         //     canvas.draw(&img.image(), DrawParam::default());
         self.map_layer.draw_tile(&mut canvas, ctx, &mut self.cache, 0x1FF);
+        self.map_layer.draw_objects(ctx, &mut canvas, &mut self.cache);
 
         ctx.gfx.set_window_title(&format!(
             "D32 - {:.0} FPS",
