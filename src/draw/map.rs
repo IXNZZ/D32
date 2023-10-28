@@ -24,7 +24,6 @@ pub struct MapTileSet {
 pub struct MapDraw {
     map_dir: PathBuf,
     map_name: String,
-    map_title: String,
     data_id: u32,
     data_number: u32,
     max_tile_width: i32,
@@ -42,11 +41,10 @@ pub struct MapDraw {
 
 impl MapDraw {
 
-    pub fn new(base_dir: &Path, data_id: u32, data_number: u32, name: &str, title: &str, window_width: f32, window_height: f32) -> Self {
+    pub fn new(base_dir: &Path, data_id: u32, data_number: u32, name: &str, window_width: f32, window_height: f32) -> Self {
         let mut this = Self {
             map_dir: base_dir.join("map"),
             map_name: String::from(name),
-            map_title: String::from(title),
             data_id,
             data_number,
             max_tile_width: window_width as i32 / 48,
@@ -71,14 +69,13 @@ impl MapDraw {
             self.tile_height = data.height as i32;
             self.tiles = data.tiles;
         } else {
-            error!("未找到地图: {}, {}", self.map_name, self.map_title);
+            error!("未找到地图: {}", self.map_name);
         }
 
     }
 
-    pub fn reload_map(&mut self, data_id: u32, data_number: u32, name: &str, title: &str, tile_x: i32, tile_y: i32, rel_offset_x: i32, rel_offset_y: i32) {
+    pub fn reload_map(&mut self, data_id: u32, data_number: u32, name: &str, tile_x: i32, tile_y: i32, rel_offset_x: i32, rel_offset_y: i32) {
         self.map_name = String::from(name);
-        self.map_title = String::from(title);
         self.data_id = data_id;
         self.data_number = data_number;
         self.reload_map_data();

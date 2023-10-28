@@ -4,25 +4,27 @@ use std::time::Instant;
 use ggez::event::{EventHandler, MouseButton};
 use ggez::{Context, GameError};
 use ggez::graphics::{Canvas, Color, DrawParam};
+use tracing::info;
 use crate::cache;
+use crate::cache::ImageCache;
+use crate::control::GameState;
 use crate::draw;
 use crate::draw::map::MapDraw;
 // use crate::cache_1::ImageCacheManager;
 
 pub struct TestCacheApp {
-    cache: cache::ImageCache,
     map_layer: MapDraw,
-    center_x: f32,
-    center_y: f32,
+    state: GameState,
+    cache: ImageCache
 }
 
 impl TestCacheApp {
     pub fn new(path: &PathBuf, ctx: &mut Context) -> Self {
         // ctx.fs.resources_dir()
         let scale_factor = ctx.gfx.window().scale_factor();
-        let size = ctx.gfx.window().inner_size();
+        // let size = ctx.gfx.window().inner_size();
         let (draw_width, draw_height) = ctx.gfx.drawable_size();
-        // let monitor_size = ctx.gfx.window().current_monitor().unwrap().size();
+        let monitor_size = ctx.gfx.window().current_monitor().unwrap().size();
         // println!("dw: {}, dh: {}", draw_width, draw_height);
         // println!("monitor_size: {:?}", monitor_size);
         // println!("size: {:?}, scale_factor: {}", size, scale_factor);
@@ -34,13 +36,22 @@ impl TestCacheApp {
         // println!("{:?}", ctx.fs.user_config_dir());
         // println!("{:?}", ctx.fs.user_data_dir());
         // println!("{:?}", ctx.fs.resources_dir());
-        let mut map = MapDraw::new(&path, 10, 1, "n3", "测试", draw_width, draw_height);
+
+        let state = GameState {
+            scale_factor: scale_factor as f32,
+            base_dir: path.to_path_buf(),
+            screen_size: (monitor_size.width as f32, monitor_size.height as f32),
+            window_size: (draw_width, draw_height),
+            center_point: (draw_width / 2., draw_height / 2.),
+
+        };
+        info!("state: {:?}", state);
+        let mut map = MapDraw::new(&path, 10, 1, "n3",draw_width, draw_height);
         map.jump_by_tile(333, 333, 0, 0);
         TestCacheApp {
-            cache: cache::ImageCache::new(path.join("data")),
             map_layer: map,
-            center_x: draw_width / 2.,
-            center_y: draw_height / 2.,
+            cache: cache::ImageCache::new(path.join("data")),
+            state,
         }
     }
 }
@@ -80,7 +91,8 @@ impl EventHandler<GameError> for TestCacheApp {
     }
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32) -> Result<(), GameError> {
-        let angle = angle2(self.center_x, self.center_y, _x, _y);
+
+        let angle = angle2(self.state.center_point.0, self.state.center_point.1, _x, _y);
         let sharing = sharing2(angle, 8.0);
         // let angle2 = angle + if angle < 0. {  360.0 } else { 0. };
         // println!("first: {}", angle2);

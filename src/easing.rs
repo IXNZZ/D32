@@ -14,11 +14,17 @@ pub enum EasingStatus {
 }
 
 #[derive(CanTween, Clone, Default)]
+pub struct Point2 {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(CanTween, Clone, Default)]
 pub struct Rect2 {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
 }
 
 pub struct Easing<T: CanTween + Clone + Default> {
