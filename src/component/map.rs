@@ -1,13 +1,15 @@
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use ggez::Context;
 use ggez::glam::{vec2};
-use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, InstanceArray, Mesh, Rect, ScreenImage, StrokeOptions, Text};
+use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect};
 use tracing::error;
 use crate::{asset};
 use crate::asset::Tile;
 use crate::cache::{CacheKey, ImageCache};
+use crate::component::{Controller, Draw};
+use crate::state::State;
 
 #[derive(Debug)]
 pub struct MapTileSet {
@@ -21,9 +23,10 @@ pub struct MapTileSet {
     object_key: CacheKey,
 }
 
-pub struct MapDraw {
+pub struct MapComponent {
     map_dir: PathBuf,
     map_name: String,
+    map_title: String,
     data_id: u32,
     data_number: u32,
     max_tile_width: i32,
@@ -39,16 +42,17 @@ pub struct MapDraw {
     current_tile_set: Vec<MapTileSet>,
 }
 
-impl MapDraw {
+impl MapComponent {
 
-    pub fn new(base_dir: &Path, data_id: u32, data_number: u32, name: &str, window_width: f32, window_height: f32) -> Self {
+    pub fn new(base_dir: &Path, data_id: u32, data_number: u32, name: &str, title: &str, window_width: f32, window_height: f32) -> Self {
         let mut this = Self {
             map_dir: base_dir.join("map"),
             map_name: String::from(name),
+            map_title: String::from(title),
             data_id,
             data_number,
-            max_tile_width: window_width as i32 / 48,
-            max_tile_height: window_height as i32 / 32,
+            max_tile_width: window_width as i32 / 48 + 1,
+            max_tile_height: window_height as i32 / 32 + 1,
             tile_width: 0,
             tile_height: 0,
             current_tile_x: 0,
@@ -80,6 +84,7 @@ impl MapDraw {
         self.data_number = data_number;
         self.reload_map_data();
         self.jump_by_tile(tile_x, tile_y, rel_offset_x, rel_offset_y);
+        self.current_tile_set = Vec::new();
         self.reload = true;
     }
 
@@ -87,13 +92,13 @@ impl MapDraw {
         self.current_tile_x = tile_x;
         self.current_tile_y = tile_y;
         if tile_x > self.tile_width {
-            self.current_tile_x = self.tile_width;
+            self.current_tile_x = self.tile_width - 1;
         }
         if tile_y > self.tile_height {
-            self.current_tile_y = self.tile_height;
+            self.current_tile_y = self.tile_height - 1;
         }
-        self.absolute_offset_x = ((self.current_tile_x - 1) * 48 + rel_offset_x) as f32;
-        self.absolute_offset_y = ((self.current_tile_y - 1) * 32 + rel_offset_y) as f32;
+        self.absolute_offset_x = (self.current_tile_x * 48 + rel_offset_x) as f32;
+        self.absolute_offset_y = (self.current_tile_y * 32 + rel_offset_y) as f32;
         self.reload = true;
     }
 
@@ -168,7 +173,7 @@ impl MapDraw {
         self.current_tile_set = sets;
     }
 
-    pub fn draw_tile(&mut self, canvas: &mut Canvas, ctx: &mut Context, cache: &mut ImageCache, layer: i32) {
+    pub fn draw_tile(&mut self, ctx: &mut Context, canvas: &mut Canvas, cache: &mut ImageCache, layer: i32) {
 
         if self.reload {
             self.reload = false;
@@ -186,7 +191,7 @@ impl MapDraw {
 
         let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
 
-        if let Some(value) = cache.get(ctx, &back_data_key) {
+        if let Some(value) = cache.get(&back_data_key) {
             // println!("value: {}", value.)
             let image_width = value.image().width() as f32;
             let image_height = value.image().height() as f32;
@@ -201,7 +206,7 @@ impl MapDraw {
                     let meta = value.meta(t.back_key.get_meta_key()).unwrap();
                     DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
                         .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y))
-            }));
+                }));
             // text_canvas.finish(ctx).unwrap();
             canvas.draw(&array, dest);
             // canvas.draw(&image, DrawParam::default());
@@ -209,7 +214,7 @@ impl MapDraw {
         }
         // println!("draw back: {:?}", time.elapsed());
         let middle_data_key = CacheKey::build_data_key(self.data_id, self.data_number + 1, 2);
-        if let Some(value) = cache.get(ctx, &middle_data_key) {
+        if let Some(value) = cache.get( &middle_data_key) {
             let mut array = InstanceArray::new(ctx, value.image());
             let image_width = value.image().width() as f32;
             let image_height = value.image().height() as f32;
@@ -225,9 +230,6 @@ impl MapDraw {
         }
         // println!("draw middle: {:?}", time.elapsed());
 
-
-
-
     }
 
     pub fn draw_objects(&mut self, ctx: &mut Context, canvas: &mut Canvas, cache: &mut ImageCache) {
@@ -235,7 +237,7 @@ impl MapDraw {
         let rel_offset_y = (self.absolute_offset_y as i32 % 32) as f32;
         let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
         let object_data_key = CacheKey::build_data_key(self.data_id, self.data_number + 2, 2);
-        if let Some(value) = cache.get(ctx, &object_data_key) {
+        if let Some(value) = cache.get(&object_data_key) {
             let mut array = InstanceArray::new(ctx, value.image());
             let image_width = value.image().width() as f32;
             let image_height = value.image().height() as f32;
@@ -252,4 +254,16 @@ impl MapDraw {
     }
 
 
+}
+
+impl Draw for MapComponent {
+    fn draw(&mut self, ctx: &mut Context, state: &mut State) {
+
+    }
+}
+
+impl Controller for MapComponent {
+    fn update(&mut self, ctx: &mut Context, state: &mut State) {
+
+    }
 }

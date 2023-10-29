@@ -149,7 +149,7 @@ impl ImageCache {
         self.load_sender.send(vec![key]).unwrap();
     }
 
-    fn insert_key(&mut self, ctx: &mut Context) {
+    pub fn insert_key(&mut self, ctx: &mut Context) {
         self.load_receiver.try_iter().for_each(|(data_key, data)| {
             let mark = self.key_mark.get(&data_key).unwrap();
             let max_height = (mark.next_height / 2000 + 1 ) * 2000;
@@ -176,8 +176,8 @@ impl ImageCache {
         });
     }
 
-    pub fn get(&mut self, ctx: &mut Context, key: &CacheDataKey) -> Option<Arc<ImageValue>> {
-        self.insert_key(ctx);
+    pub fn get(&mut self, key: &CacheDataKey) -> Option<Arc<ImageValue>> {
+        // self.insert_key(ctx);
         self.key_image.get(key)
     }
 }

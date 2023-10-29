@@ -1,21 +1,22 @@
 use std::{env, path};
 use ggez::conf::{WindowMode, WindowSetup};
-use ggez::{event, GameResult};
+use ggez::{GameResult};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
-use crate::test_cache::TestCacheApp;
+use crate::state::State;
 
 mod scene;
 mod asset;
 // mod cache_bak;
-mod cache_1;
-mod test_cache;
-mod draw;
 mod cache;
 mod easing;
 mod control;
+mod component;
+mod state;
+mod app;
+mod event;
 
 struct LocalTimer;
 
@@ -48,9 +49,13 @@ fn main() -> GameResult {
 
     let (mut ctx, event_loop) = cb.build()?;
 
-    let app = TestCacheApp::new(&resource_dir, &mut ctx);
+    let mut state = State::new(resource_dir, &mut ctx);
 
-    event::run(ctx, event_loop, app)
+    let mut app = app::App::new(&mut ctx, &mut state);
+
+    // let app = TestCacheApp::new(&resource_dir, &mut ctx);
+
+    event::run(ctx, event_loop, app, state)
 }
 
 
