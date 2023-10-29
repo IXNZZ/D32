@@ -17,6 +17,7 @@ mod component;
 mod state;
 mod app;
 mod event;
+mod net;
 
 struct LocalTimer;
 

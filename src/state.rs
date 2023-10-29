@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use ggez::Context;
 use crate::cache::ImageCache;
 

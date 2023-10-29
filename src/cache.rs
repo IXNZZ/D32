@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 use std::{sync, thread};
-use std::ops::{Deref, Index};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
-use ggez::{Context, GameError, GameResult, input};
+use ggez::{Context};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, Image, ImageFormat};
 use moka::sync::Cache;
 use tracing::error;
 use crate::asset::ImageData;
 use itertools::Itertools;
-use tracing_subscriber::filter::FilterExt;
 use crate::asset;
 
 #[derive(Clone, Debug)]
@@ -96,7 +94,6 @@ pub struct ImageCache {
     names: Cache<u32, String>,
     key_mark: Cache<CacheDataKey, ImageMark>,
     key_image: Cache<CacheDataKey, Arc<ImageValue>>,
-    // temp_image: Cache<CacheDataKey, Arc<Vec<(ImageMeta, ImageData)>>>,
     load_sender: Sender<Vec<CacheKey>>,
     load_receiver: Receiver<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>
 }
@@ -106,10 +103,9 @@ impl ImageCache {
     pub fn new(data_dir: PathBuf) -> Self {
         let key_image = Cache::builder().time_to_idle(Duration::from_secs(5 * 60)).build();
         let key_mark = Cache::builder().time_to_idle(Duration::from_secs(5 * 60)).build();
-        // let temp_image = Cache::builder().time_to_live(Duration::from_secs(1 * 60)).build();
         let (load_sender, receiver) = sync::mpsc::channel::<Vec<CacheKey>>();
         let (sender, load_receiver) = sync::mpsc::channel::<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>();
-        let mut names = Cache::new(255);
+        let names = Cache::new(255);
         names.insert(1, String::from("tiles"));
         names.insert(2, String::from("smTiles"));
         names.insert(3, String::from("objects"));

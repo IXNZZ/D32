@@ -1,5 +1,5 @@
 use ggez::{Context, GameError};
-use ggez::event::{ControlFlow, ErrorOrigin, EventHandler, EventLoop, MouseButton, process_event};
+use ggez::event::{ControlFlow, ErrorOrigin, EventLoop, MouseButton, process_event};
 use ggez::input::keyboard::{KeyCode, KeyInput, KeyMods};
 use ggez::winit::dpi;
 use ggez::winit::event::{ElementState, Event, Ime, KeyboardInput, MouseScrollDelta, WindowEvent};
@@ -341,13 +341,6 @@ fn catch_error<T, E, S: 'static>(
     false
 }
 
-pub trait SceneEvent {
-    fn select<T: SceneEvent>(&mut self, _ctx: &mut Context, _state: &mut State, handle: &mut T) -> Result<(), GameError> {
-        Ok(())
-    }
-}
-
-
 pub trait AppEventHandler<E = GameError>
     where
         E: std::fmt::Debug
@@ -441,7 +434,7 @@ pub trait AppEventHandler<E = GameError>
         Ok(())
     }
 
-    fn ime_input_event(&mut self, _ctx: &mut Context, ime: Ime, _state: &mut State) -> Result<(), E> {
+    fn ime_input_event(&mut self, _ctx: &mut Context, _ime: Ime, _state: &mut State) -> Result<(), E> {
         Ok(())
     }
 

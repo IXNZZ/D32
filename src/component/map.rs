@@ -137,9 +137,9 @@ impl MapComponent {
 
                 // println!("even: {even}, p: {p}, w: {w}, h: {h}, start_x: {start_x}, start_y: {start_y}, tile: {:?}", tile);
 
-                let back_idx = (tile.back as u32 & 0x7FFF);
-                let middle_idx = (tile.middle as u32 & 0x7FFF);
-                let object_idx = (tile.objects as u32 & 0x7FFF);
+                let back_idx = tile.back as u32 & 0x7FFF;
+                let middle_idx = tile.middle as u32 & 0x7FFF;
+                let object_idx = tile.objects as u32 & 0x7FFF;
                 let back_idx = if back_idx > 0 { back_idx - 1 } else { 0 };
                 let middle_idx = if middle_idx > 0 { middle_idx - 1 } else { 0 };
                 let object_idx = if object_idx > 0 { object_idx - 1 } else { 0 };

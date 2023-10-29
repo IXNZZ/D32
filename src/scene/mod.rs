@@ -6,7 +6,7 @@ use ggez::event::{ErrorOrigin, MouseButton};
 use ggez::input::keyboard::{KeyCode, KeyInput};
 use ggez::winit::event::Ime;
 use tracing::debug;
-use crate::event::{AppEventHandler, SceneEvent};
+use crate::event::{AppEventHandler};
 use crate::scene::loading::LoadingScene;
 use crate::scene::player::PlayerScene;
 use crate::state::State;
