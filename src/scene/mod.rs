@@ -26,6 +26,7 @@ pub struct MainScene {
 
 impl MainScene {
     pub fn new(ctx: &mut Context, state: &mut State) -> Self {
+        state.initialled = true;
         MainScene {scene: Box::new(PlayerScene::new(ctx, state))}
     }
 
@@ -40,7 +41,6 @@ impl AppEventHandler<GameError> for MainScene {
             self.switch_scene(_ctx, _state, x);
         }
         self.scene.update(_ctx, _state)
-        // self.update(_ctx, _state)
     }
 
     fn draw(&mut self, _ctx: &mut Context, _state: &mut State) -> Result<(), GameError> {

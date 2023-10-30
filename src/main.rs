@@ -14,10 +14,10 @@ mod cache;
 mod easing;
 mod control;
 mod component;
-mod state;
 mod app;
 mod event;
 mod net;
+mod state;
 
 struct LocalTimer;
 

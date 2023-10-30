@@ -1,25 +1,9 @@
-use std::path::{PathBuf};
+mod map;
+
+use std::path::PathBuf;
 use ggez::Context;
 use crate::cache::ImageCache;
-
-#[derive(Debug, Default)]
-pub struct MapState {
-    pub(crate) map_id: u32,
-    pub(crate) map_name: String,
-    pub(crate) map_title: String,
-    pub(crate) map_data_id: u32,
-    pub(crate) map_data_number: u32,
-    pub(crate) map_max_width: u32,
-    pub(crate) map_max_height: u32,
-    pub(crate) sprite_tile_x: i32,
-    pub(crate) sprite_tile_y: i32,
-    pub(crate) sprite_abs_x: f32,
-    pub(crate) sprite_abs_y: f32,
-}
-
-pub struct SpriteState {
-
-}
+use crate::state::map::MapState;
 
 pub struct State {
     pub(crate) base_dir: PathBuf,
@@ -30,6 +14,7 @@ pub struct State {
     pub(crate) window_height: f32,
     pub(crate) center_x: f32,
     pub(crate) center_y: f32,
+    pub(crate) initialled: bool,
     pub(crate) cache: ImageCache,
     pub(crate) map: MapState,
 }
@@ -49,8 +34,12 @@ impl State {
             window_height,
             center_x: window_width / 2.,
             center_y: window_height / 2.,
-            cache: ImageCache::new(base_dir),
-            map: MapState::default()
+            initialled: false,
+            cache: ImageCache::new(base_dir.join("data")),
+            map: MapState {
+                map_dir: base_dir.join("map"),
+                .. MapState::default()
+            }
         }
     }
 }

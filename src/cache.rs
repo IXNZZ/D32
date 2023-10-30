@@ -87,8 +87,8 @@ impl ImageValue {
     }
 }
 
-type CacheDataKey = u32;
-type CacheMetaKey = u32;
+pub type CacheDataKey = u32;
+pub type CacheMetaKey = u32;
 
 pub struct ImageCache {
     names: Cache<u32, String>,

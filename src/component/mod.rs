@@ -1,15 +1,18 @@
 use ggez::Context;
+use ggez::graphics::Canvas;
 use crate::state::State;
 
 pub mod map;
 
 pub enum Layer {
-    Map(i32),
-
+    MapTile,
+    MapMiddle,
+    MapObjects,
+    State,
 }
 
 pub trait Draw {
-    fn draw(&mut self, ctx: &mut Context, state: &mut State) {
+    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer) {
 
     }
 }

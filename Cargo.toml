@@ -16,3 +16,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"]}
 ggez = { version = "0.9.3" }
 itertools = "0.11"
+pathfinding = "4.3.2"
