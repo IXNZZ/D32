@@ -2,14 +2,14 @@ use ggez::Context;
 use ggez::graphics::Canvas;
 use crate::cache::ImageCache;
 use crate::control::GameState;
-use crate::easing::{Easing, Point2};
+use crate::easing::{Easing};
 
 pub struct MapControl {
     move_x: f32,
     move_y: f32,
     map_title: String,
-    walk_easing: Easing<Point2>,
-    run_easing: Easing<Point2>,
+    // walk_easing: Easing<Point2>,
+    // run_easing: Easing<Point2>,
 }
 
 impl MapControl {

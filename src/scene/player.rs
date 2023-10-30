@@ -1,6 +1,7 @@
 use ggez::{Context, GameError};
+use ggez::event::MouseButton;
 use ggez::graphics::{Canvas, Color, DrawParam, Image, ScreenImage};
-use crate::component::{Controller, Draw, Layer};
+use crate::component::{Controller, Draw, Event, Layer};
 use crate::component::map::MapComponent;
 use crate::event::AppEventHandler;
 use crate::state::State;
@@ -49,6 +50,21 @@ impl AppEventHandler<GameError> for PlayerScene {
         canvas.draw(&self.object_image, DrawParam::default());
         // canvas.draw(&self.map_image, DrawParam::default());
         canvas.finish(ctx)?;
+        Ok(())
+    }
+
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32, state: &mut State) -> Result<(), GameError> {
+        self.map_component.mouse_button_down_event(_ctx, button, x, y, state);
+        Ok(())
+    }
+
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32, _state: &mut State) -> Result<(), GameError> {
+        self.map_component.mouse_button_up_event(_ctx, _button, _x, _y, _state);
+        Ok(())
+    }
+
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32, _state: &mut State) -> Result<(), GameError> {
+        self.map_component.mouse_motion_event(_ctx, _x, _y, _dx, _dy, _state);
         Ok(())
     }
 }

@@ -36,10 +36,7 @@ impl State {
             center_y: window_height / 2.,
             initialled: false,
             cache: ImageCache::new(base_dir.join("data")),
-            map: MapState {
-                map_dir: base_dir.join("map"),
-                .. MapState::default()
-            }
+            map: MapState::new(&base_dir),
         }
     }
 }

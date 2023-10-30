@@ -1,4 +1,5 @@
 use ggez::Context;
+use ggez::event::MouseButton;
 use ggez::graphics::Canvas;
 use crate::state::State;
 
@@ -24,7 +25,16 @@ pub trait Controller {
 }
 
 pub trait Event {
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32, state: &mut State) {
 
+    }
+
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32, _state: &mut State) {
+    }
+
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32, _state: &mut State) {
+
+    }
 }
 
 pub trait Initializer {

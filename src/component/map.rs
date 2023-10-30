@@ -1,11 +1,14 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 use ggez::Context;
+use ggez::event::MouseButton;
 use ggez::glam::{vec2};
 use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect};
 use crate::asset::Tile;
 use crate::cache::{CacheDataKey, CacheKey, CacheMetaKey, ImageMeta, ImageValue};
-use crate::component::{Controller, Draw, Layer};
+use crate::component::{Controller, Draw, Event, Layer};
+use crate::easing;
+use crate::easing::EasingStatus;
 use crate::state::State;
 
 #[derive(Debug)]
@@ -27,6 +30,9 @@ pub struct MapComponent {
     max_tile_width: i32,
     max_tile_height: i32,
     current_tile_set: Vec<MapTileSet>,
+    mouse_button_down: bool,
+    direction: u8,
+    move_type: u8,
 }
 
 impl MapComponent {
@@ -37,6 +43,9 @@ impl MapComponent {
             max_tile_width: window_width as i32 / 48 + 1,
             max_tile_height: window_height as i32 / 32 + 1,
             current_tile_set: Vec::new(),
+            mouse_button_down: false,
+            direction: 0,
+            move_type: 0,
         }
     }
 
@@ -186,9 +195,62 @@ impl Draw for MapComponent {
 
 impl Controller for MapComponent {
     fn update(&mut self, ctx: &mut Context, state: &mut State) {
+        match state.map.easing.status() {
+            EasingStatus::Run | EasingStatus::PauseStart | EasingStatus::PauseFinish => {
+                state.map.easing.advance(ctx.time.delta().as_secs_f64());
+                let point2 = state.map.easing.now();
+                state.map.move_by_pixel(point2.x, point2.y);
+                println!("easing {}|{}, status: {:?}", point2.x, point2.y, state.map.easing.status());
+            },
+            _ => {
+                if self.mouse_button_down {
+                    if self.move_type == 2 {
+                        state.map.run_by_direction(self.direction);
+                    } else if self.move_type == 1 {
+                        state.map.walk_by_direction(self.direction);
+                    }
+                }
+            }
+        }
         if state.map.reload {
             state.map.reload = false;
             self.build_map_window(state, 255)
         }
+    }
+}
+
+impl Event for MapComponent {
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32, state: &mut State) {
+        self.mouse_button_down = true;
+        let angle = easing::angle8(state.center_x, state.center_y, x, y);
+        self.direction = angle as u8;
+        match button {
+            MouseButton::Left => {
+                self.move_type = 1;
+                state.map.walk_by_direction(self.direction);
+            }
+            MouseButton::Right => {
+                self.move_type = 2;
+                state.map.run_by_direction(self.direction);
+            }
+            _ => {}
+        }
+    }
+
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, _x: f32, _y: f32, _state: &mut State) {
+        self.mouse_button_down = false;
+        // match button {
+        //     MouseButton::Left => {
+        //         println!("Left mouse button up")
+        //     }
+        //     MouseButton::Right => {
+        //         println!("Right mouse button up")
+        //     }
+        //     _ => {}
+        // }
+    }
+
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32, _state: &mut State) {
+        // println!("x: {}, y: {}, dx: {}, dy: {}", _x, _y, _dx, _dy);
     }
 }

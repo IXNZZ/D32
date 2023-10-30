@@ -1,9 +1,10 @@
 
 
 use keyframe::{AnimationSequence, CanTween, keyframes};
+use keyframe::mint::Point2;
 use keyframe_derive::CanTween;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum EasingStatus {
     Ready,
     Run,
@@ -13,13 +14,13 @@ pub enum EasingStatus {
     Stop,
 }
 
-#[derive(CanTween, Clone, Default)]
-pub struct Point2 {
-    pub x: f32,
-    pub y: f32,
-}
+// #[derive(CanTween, Clone, Default, Debug)]
+// pub struct Point2 {
+//     pub x: f32,
+//     pub y: f32,
+// }
 
-#[derive(CanTween, Clone, Default)]
+#[derive(CanTween, Clone, Default, Debug)]
 pub struct Rect2 {
     pub x: f32,
     pub y: f32,
@@ -27,12 +28,33 @@ pub struct Rect2 {
     pub h: f32,
 }
 
-pub struct Easing<T: CanTween + Clone + Default> {
+pub struct Easing<T: CanTween> {
     status: EasingStatus,
     sequence: AnimationSequence<T>
 }
 
-impl<T: CanTween + Clone + Default> Easing<T> {
+// impl Default for Point2<f32> {
+//     fn default() -> Self {
+//         Point2 {x: 0.0, y: 0.0}
+//     }
+// }
+
+// impl Default for Easing<Point2<f32>> {
+//     fn default() -> Self {
+//         let start = Point2{ x: 0., y: 0.};
+//         let finish = Point2{ x: 0., y: 0.};
+//         let sequence = keyframes![
+//             (start, 1., keyframe::functions::Linear),
+//             (finish, 1., keyframe::functions::Linear)
+//         ];
+//         Self {
+//             status: EasingStatus::Ready,
+//             sequence
+//         }
+//     }
+// }
+
+impl<T: CanTween> Easing<T> {
     pub fn new(start: T, finish: T, time: f64) -> Self {
         let sequence = keyframes![
             (start, time, keyframe::functions::Linear),
@@ -42,6 +64,24 @@ impl<T: CanTween + Clone + Default> Easing<T> {
             status: EasingStatus::Ready,
             sequence
         }
+    }
+
+    pub fn wrap_run(start: T, finish: T, time: f64) -> Self {
+        let mut easing = Easing::new(start, finish, time);
+        easing.run();
+        easing
+    }
+
+    pub fn once_start(start: T, finish: T, time: f64) -> Self {
+        let mut easing = Easing::new(start, finish, time);
+        easing.pause_to_start();
+        easing
+    }
+
+    pub fn once_finish(start: T, finish: T, time: f64) -> Self {
+        let mut easing = Easing::new(start, finish, time);
+        easing.pause_to_finish();
+        easing
     }
 
     pub fn run(&mut self) {
@@ -69,7 +109,7 @@ impl<T: CanTween + Clone + Default> Easing<T> {
         self.sequence.advance_to(0.0);
     }
 
-    pub fn advance_warp(&mut self, duration: f64) {
+    pub fn advance(&mut self, duration: f64) {
         if self.status == EasingStatus::Run {
             self.sequence.advance_and_maybe_wrap(duration);
         } else if self.status == EasingStatus::PauseStart && self.sequence.advance_and_maybe_wrap(duration) {
