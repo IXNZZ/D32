@@ -149,7 +149,7 @@ impl ImageCache {
         self.load_receiver.try_iter().for_each(|(data_key, data)| {
             let mark = self.key_mark.get(&data_key).unwrap();
             let max_height = (mark.next_height / 2000 + 1 ) * 2000;
-            let image = Image::new_canvas_image(ctx, ImageFormat::Rgba8UnormSrgb, 2000, max_height, 1);
+            let image = Image::new_canvas_image(ctx, ImageFormat::Rgba8UnormSrgb, 8000, max_height, 1);
             let mut canvas = Canvas::from_image(ctx, image.clone(), Color::from_rgba(0, 0, 0, 0));
             let mut meta_image = HashMap::new();
             if let Some(value) = self.key_image.get(&data_key) {
@@ -204,7 +204,7 @@ fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
             let mut mark = if key_mark.contains_key(&data_key) {
                 key_mark.get(&data_key).unwrap()
             } else {
-                ImageMark::new(2000, 2000)
+                ImageMark::new(8000, 2000)
             };
             let md = group.filter(|key| !is_exists(key)).map(|key| {
                 let data = load_image0(index, key, names, &data_dir);

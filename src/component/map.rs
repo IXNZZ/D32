@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ggez::Context;
 use ggez::event::MouseButton;
 use ggez::glam::{vec2};
-use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect};
+use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect, Text};
 use crate::asset::Tile;
 use crate::cache::{CacheDataKey, CacheKey, CacheMetaKey, ImageMeta, ImageValue};
 use crate::component::{Controller, Draw, Event, Layer};
@@ -56,6 +56,7 @@ impl MapComponent {
         let max_height = self.max_tile_height + 12;
         let start_x = map.sprite_tile_x - self.max_tile_width / 2 - 2;
         let start_y = map.sprite_tile_y - self.max_tile_height / 2 - 2;
+        // println!("start: {}|{}, tile: {}|{}", start_x, start_y, map.sprite_tile_x, map.sprite_tile_y);
         let mut sets: Vec<MapTileSet> = Vec::new();
         for w in 0..max_width {
             for h in 0..max_height {
@@ -75,7 +76,8 @@ impl MapComponent {
 
 
                 sets.push(MapTileSet {
-                    layer: layer + (w + start_x) * 1024,
+                    // layer: layer + (w + start_x) * 1024,
+                    layer: p,
                     even,
                     tile: tile.clone(),
                     x: w as f32 * 48.,
@@ -97,11 +99,14 @@ impl MapComponent {
         let object_keys = sets.iter().filter(|x| (x.tile.objects & 0x7FFF) > 0).map(|t| {
             t.object_key
         }).collect::<Vec<CacheKey>>();
-        // println!("back keys len: {}", back_keys.len());
         state.cache.load_keys(back_keys.as_slice());
         state.cache.load_keys(middle_keys.as_slice());
         state.cache.load_keys(object_keys.as_slice());
         self.current_tile_set = sets;
+        // println!("back keys len: {}", self.current_tile_set.len());
+        // println!("1 : {:?}", self.current_tile_set[0]);
+        // println!("2 : {:?}", self.current_tile_set[1]);
+        // println!("3 : {:?}", self.current_tile_set[3]);
     }
 
     pub fn draw_tile(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas) {
@@ -160,8 +165,8 @@ impl MapComponent {
     {
         let map = &mut state.map;
         let cache = &mut state.cache;
-        let rel_offset_x = (map.sprite_abs_x as i32 % 48) as f32;
-        let rel_offset_y = (map.sprite_abs_y as i32 % 32) as f32;
+        let rel_offset_x = 48. - (map.sprite_abs_x as i32 % 48) as f32;
+        let rel_offset_y = 32. - (map.sprite_abs_y as i32 % 32) as f32;
         let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
         if let Some(value) = cache.get(&data_key) {
             let mut array = InstanceArray::new(ctx, value.image());
@@ -170,8 +175,10 @@ impl MapComponent {
             array.set(self.current_tile_set
                 .iter()
                 .filter(|t|filter(&value, *t))
-                .map(|t|{
+                .map(|t| {
                     let meta = value.meta(meta_key(t)).unwrap();
+                    // let text = Text::new(format!("{}|{}\n{}|{}", meta.src_x, meta.src_y, meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y));
+                    // canvas.draw(&text, DrawParam::default().dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta))));
                     DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
                         .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta)))
                 }));
@@ -200,7 +207,7 @@ impl Controller for MapComponent {
                 state.map.easing.advance(ctx.time.delta().as_secs_f64());
                 let point2 = state.map.easing.now();
                 state.map.move_by_pixel(point2.x, point2.y);
-                println!("easing {}|{}, status: {:?}", point2.x, point2.y, state.map.easing.status());
+                // println!("easing {}|{}, status: {:?}", point2.x, point2.y, state.map.easing.status());
             },
             _ => {
                 if self.mouse_button_down {
@@ -227,30 +234,26 @@ impl Event for MapComponent {
         match button {
             MouseButton::Left => {
                 self.move_type = 1;
-                state.map.walk_by_direction(self.direction);
+                // state.map.walk_by_direction(self.direction);
             }
             MouseButton::Right => {
                 self.move_type = 2;
-                state.map.run_by_direction(self.direction);
+                // state.map.run_by_direction(self.direction);
             }
             _ => {}
         }
     }
 
-    fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, _x: f32, _y: f32, _state: &mut State) {
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32, _state: &mut State) {
         self.mouse_button_down = false;
-        // match button {
-        //     MouseButton::Left => {
-        //         println!("Left mouse button up")
-        //     }
-        //     MouseButton::Right => {
-        //         println!("Right mouse button up")
-        //     }
-        //     _ => {}
-        // }
     }
 
-    fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32, _state: &mut State) {
-        // println!("x: {}, y: {}, dx: {}, dy: {}", _x, _y, _dx, _dy);
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32, state: &mut State) {
+        if self.mouse_button_down {
+            let angle = easing::angle8(state.center_x, state.center_y, x, y) as u8;
+            if angle != self.direction {
+                self.direction = angle;
+            }
+        }
     }
 }

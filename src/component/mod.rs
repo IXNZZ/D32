@@ -4,12 +4,15 @@ use ggez::graphics::Canvas;
 use crate::state::State;
 
 pub mod map;
+pub mod debug;
 
 pub enum Layer {
     MapTile,
     MapMiddle,
     MapObjects,
     State,
+
+    Debug,
 }
 
 pub trait Draw {

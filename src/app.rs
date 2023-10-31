@@ -1,7 +1,11 @@
+use std::fs;
+use std::path::PathBuf;
 use ggez::{Context, GameError};
 use ggez::event::{ErrorOrigin, MouseButton};
+use ggez::graphics::FontData;
 use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::Ime;
+use tracing::info;
 use crate::event::AppEventHandler;
 use crate::scene::MainScene;
 use crate::state::State;
@@ -12,9 +16,20 @@ pub struct App {
 
 impl App {
     pub fn new(ctx: &mut Context, state: &mut State) -> Self {
+        App::load_font(ctx,  "Medium", state.base_dir.join("font").join("Medium.otf"));
+        App::load_font(ctx,  "Bold", state.base_dir.join("font").join("Bold.otf"));
+        App::load_font(ctx,  "Regular", state.base_dir.join("font").join("Regular.otf"));
         let scene = MainScene::new(ctx, state);
         Self {
             scene,
+        }
+    }
+
+    fn load_font(ctx: &mut Context, name: &str, path: PathBuf) {
+        if path.is_file() {
+            info!("load font: {:?}", path);
+            let vec = fs::read(path).unwrap();
+            ctx.gfx.add_font(name, FontData::from_vec(vec).unwrap());
         }
     }
 }

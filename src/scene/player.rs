@@ -2,12 +2,14 @@ use ggez::{Context, GameError};
 use ggez::event::MouseButton;
 use ggez::graphics::{Canvas, Color, DrawParam, Image, ScreenImage};
 use crate::component::{Controller, Draw, Event, Layer};
+use crate::component::debug::DebugComponent;
 use crate::component::map::MapComponent;
 use crate::event::AppEventHandler;
 use crate::state::State;
 
 pub struct PlayerScene {
     map_component: MapComponent,
+    debug_component: DebugComponent,
     map_image: Image,
     object_image: Image,
 }
@@ -23,6 +25,7 @@ impl PlayerScene {
         let object_image = ScreenImage::new(ctx, None, 1.0, 1.0, 1).image(ctx);
         Self {
             map_component: map,
+            debug_component: DebugComponent::new(),
             map_image,
             object_image,
         }
@@ -45,26 +48,33 @@ impl AppEventHandler<GameError> for PlayerScene {
 
         map_canvas.finish(ctx)?;
         object_canvas.finish(ctx)?;
+
+
+
         let mut canvas = Canvas::from_frame(ctx, Color::new(0., 0., 0., 0.));
         canvas.draw(&self.map_image, DrawParam::default());
         canvas.draw(&self.object_image, DrawParam::default());
         // canvas.draw(&self.map_image, DrawParam::default());
+        self.debug_component.draw(ctx, &mut canvas, _state, Layer::Debug);
         canvas.finish(ctx)?;
         Ok(())
     }
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32, state: &mut State) -> Result<(), GameError> {
         self.map_component.mouse_button_down_event(_ctx, button, x, y, state);
+        self.debug_component.mouse_button_down_event(_ctx, button, x, y, state);
         Ok(())
     }
 
     fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32, _state: &mut State) -> Result<(), GameError> {
         self.map_component.mouse_button_up_event(_ctx, _button, _x, _y, _state);
+        self.debug_component.mouse_button_up_event(_ctx, _button, _x, _y, _state);
         Ok(())
     }
 
     fn mouse_motion_event(&mut self, _ctx: &mut Context, _x: f32, _y: f32, _dx: f32, _dy: f32, _state: &mut State) -> Result<(), GameError> {
         self.map_component.mouse_motion_event(_ctx, _x, _y, _dx, _dy, _state);
+        self.debug_component.mouse_motion_event(_ctx, _x, _y, _dx, _dy, _state);
         Ok(())
     }
 }
