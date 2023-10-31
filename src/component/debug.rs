@@ -32,6 +32,9 @@ impl Draw for DebugComponent {
             );
             self.text.clear();
             self.text.add(t);
+
+
+
         }
         canvas.draw(&self.text, DrawParam::new().dest(vec2(10., 10.)).color(Color::from_rgb_u32(0x0c8918)));
     }

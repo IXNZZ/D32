@@ -1,6 +1,8 @@
 use ggez::{Context, GameError};
 use ggez::event::MouseButton;
+use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, Image, ScreenImage};
+use ggez::mint::Vector2;
 use crate::component::{Controller, Draw, Event, Layer};
 use crate::component::debug::DebugComponent;
 use crate::component::map::MapComponent;
@@ -17,10 +19,10 @@ pub struct PlayerScene {
 impl PlayerScene {
 
     pub fn new(ctx: &mut Context, state: &mut State) -> Self {
-        state.map.reload_map(1, 1, 1, "n3", "test", 333, 333, 0, 0);
+        state.map.reload_map(1, 1, 1, "n0", "test", 333, 333, 0, 0);
 
 
-        let map = MapComponent::new(state, state.window_width, state.window_height);
+        let map = MapComponent::new(state, 1600.0, 1120.0);
         let map_image = ScreenImage::new(ctx, None, 1.0, 1.0, 1).image(ctx);
         let object_image = ScreenImage::new(ctx, None, 1.0, 1.0, 1).image(ctx);
         Self {
@@ -52,8 +54,8 @@ impl AppEventHandler<GameError> for PlayerScene {
 
 
         let mut canvas = Canvas::from_frame(ctx, Color::new(0., 0., 0., 0.));
-        canvas.draw(&self.map_image, DrawParam::default());
-        canvas.draw(&self.object_image, DrawParam::default());
+        canvas.draw(&self.map_image, DrawParam::default().scale(vec2(1.5, 1.5)));
+        canvas.draw(&self.object_image, DrawParam::default().scale(vec2(1.5, 1.5)));
         // canvas.draw(&self.map_image, DrawParam::default());
         self.debug_component.draw(ctx, &mut canvas, _state, Layer::Debug);
         canvas.finish(ctx)?;

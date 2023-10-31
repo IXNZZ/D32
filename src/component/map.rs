@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ggez::Context;
 use ggez::event::MouseButton;
 use ggez::glam::{vec2};
-use ggez::graphics::{Canvas, DrawParam, InstanceArray, Rect, Text};
+use ggez::graphics::{BlendMode, Canvas, DrawParam, InstanceArray, Rect, Text};
 use crate::asset::Tile;
 use crate::cache::{CacheDataKey, CacheKey, CacheMetaKey, ImageMeta, ImageValue};
 use crate::component::{Controller, Draw, Event, Layer};
@@ -147,7 +147,7 @@ impl MapComponent {
         let object_data_key = CacheKey::build_data_key(map.map_data_id, map.map_data_number + 2, 2);
 
         let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
-            value.meta(tile.object_key.get_meta_key()).is_some()
+            value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame == 0
         };
         let meta = |tile: &MapTileSet| -> CacheMetaKey {
             tile.object_key.get_meta_key()
@@ -156,6 +156,12 @@ impl MapComponent {
             meta.height as f32
         };
         self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
+
+        // canvas.set_blend_mode(BlendMode::ADD);
+        // let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
+        //     value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame != 0
+        // };
+        // self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
     }
 
     pub fn draw_map<F, M, S>(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas, data_key: CacheDataKey, filter: F, meta_key: M, offset: S)
@@ -180,7 +186,7 @@ impl MapComponent {
                     // let text = Text::new(format!("{}|{}\n{}|{}", meta.src_x, meta.src_y, meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y));
                     // canvas.draw(&text, DrawParam::default().dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta))));
                     DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
-                        .dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta)))
+                        .dest(vec2(t.x + rel_offset_x, t.y + rel_offset_y - offset(meta)))
                 }));
             canvas.draw(&array, dest);
         }
