@@ -69,19 +69,22 @@ impl<T: CanTween + Clone + Default> Easing<T> {
         self.sequence.advance_to(0.0);
     }
 
-    pub fn advance(&mut self, duration: f64) {
+    pub fn advance(&mut self, duration: f64) -> bool {
 
         if self.status == EasingStatus::Run {
             self.sequence.advance_and_maybe_wrap(duration);
         } else if self.status == EasingStatus::PauseStart && self.sequence.advance_and_maybe_wrap(duration) {
             self.sequence.advance_to(0.0);
             self.pause();
+            return true;
         } else if self.status == EasingStatus::PauseFinish {
             if self.sequence.advance_by(duration) > 0.0 {
                 self.sequence.advance_to(self.timestamp);
                 self.pause();
+                return true;
             }
         }
+        return false;
     }
 
     pub fn new(start: T, finish: T, time: f64) -> Self {

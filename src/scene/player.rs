@@ -22,7 +22,7 @@ impl PlayerScene {
         state.map.reload_map(1, 1, 1, "n0", "test", 333, 333, 0, 0);
 
 
-        let map = MapComponent::new(state, 1600.0, 1120.0);
+        let map = MapComponent::new(state, 1600.0, 1200.0);
         let map_image = ScreenImage::new(ctx, None, 1.0, 1.0, 1).image(ctx);
         let object_image = ScreenImage::new(ctx, None, 1.0, 1.0, 1).image(ctx);
         Self {
