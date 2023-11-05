@@ -5,6 +5,7 @@ use crate::state::State;
 
 pub mod map;
 pub mod debug;
+pub mod sprite;
 
 pub enum Layer {
     MapTile,
@@ -16,15 +17,11 @@ pub enum Layer {
 }
 
 pub trait Draw {
-    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer) {
-
-    }
+    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer);
 }
 
 pub trait Controller {
-    fn update(&mut self, ctx: &mut Context, state: &mut State) {
-
-    }
+    fn update(&mut self, ctx: &mut Context, state: &mut State);
 }
 
 pub trait Event {

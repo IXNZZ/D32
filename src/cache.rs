@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::{sync, thread};
+use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -105,33 +106,54 @@ impl ImageCache {
         let key_mark = Cache::builder().time_to_idle(Duration::from_secs(5 * 60)).build();
         let (load_sender, receiver) = sync::mpsc::channel::<Vec<CacheKey>>();
         let (sender, load_receiver) = sync::mpsc::channel::<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>();
-        let names = Cache::new(255);
-        names.insert(1, String::from("tiles"));
-        names.insert(2, String::from("smTiles"));
-        names.insert(3, String::from("objects"));
+
         let mut k = key_image.clone();
         // let mut t = temp_image.clone();
         let mut index: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut m = key_mark.clone();
-        let n = names.clone();
         let cache = Self {
-            names,
+            names: ImageCache::init_names(),
             key_mark,
             key_image,
             load_sender,
             load_receiver,
         };
 
-
+        let sender1 = sender.clone();
+        let dir = data_dir.clone();
+        let names = cache.names.clone();
         thread::spawn(move || {
             loop {
                 if let Ok(keys) = receiver.recv() {
-                    draw_image(&mut index, &mut m, &mut k, sender.clone(), keys, &n, data_dir.clone())
+                    draw_image(&mut index, &mut m, &mut k, &sender1, keys, &names, &dir);
                 }
             }
         });
 
         cache
+    }
+
+    pub fn init_names() -> Cache<u32, String> {
+        let names = Cache::new(255);
+        names.insert(1, String::from("tiles"));
+        names.insert(2, String::from("smTiles"));
+        names.insert(3, String::from("objects"));
+        names.insert(4, String::from("hum"));
+        names.insert(5, String::from("hair"));
+        names.insert(6, String::from("effect"));
+        names.insert(7, String::from("weapon"));
+        names.insert(8, String::from("weaponEffect"));
+        names.insert(9, String::from("magic"));
+        names.insert(10, String::from("magicRe"));
+        names.insert(11, String::from("items"));
+        names.insert(12, String::from("mmap"));
+        names.insert(13, String::from("mon"));
+        names.insert(14, String::from("monEffect"));
+        names.insert(15, String::from("monn"));
+        names.insert(16, String::from("npc"));
+        names.insert(17, String::from("ui_n"));
+
+        names
     }
 
     pub fn add_name(&mut self, key: u32, name: String) {
@@ -166,9 +188,9 @@ impl ImageCache {
                 }
                 meta_image.insert(meta.key.get_meta_key(), meta.clone());
             });
-
             canvas.finish(ctx).unwrap();
-            self.key_image.insert(data_key, Arc::new(ImageValue { image, meta: meta_image}))
+            println!("data_id: {}, data_number: {}, count: {}, ", data_key, data_key, meta_image.len());
+            self.key_image.insert(data_key, Arc::new(ImageValue { image, meta: meta_image}));
         });
     }
 
@@ -181,10 +203,10 @@ impl ImageCache {
 fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
               key_mark: &mut Cache<CacheDataKey, ImageMark>,
               cache: &mut Cache<CacheDataKey, Arc<ImageValue>>,
-              sender: Sender<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>,
+              sender: &Sender<(CacheDataKey, Vec<(ImageMeta, ImageData)>)>,
               keys: Vec<CacheKey>,
     names: &Cache<u32, String>,
-    data_dir: T) {
+    data_dir: &T) {
     let mut key_vec: Vec<CacheKey> = Vec::new();
     for key in keys {
         for count in 0..key.get_data_count() {
@@ -207,13 +229,16 @@ fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
                 ImageMark::new(8000, 2000)
             };
             let md = group.filter(|key| !is_exists(key)).map(|key| {
-                let data = load_image0(index, key, names, &data_dir);
+                let data = load_image0(index, key, names, data_dir);
                 let meta = mark.update(key, &data);
                 (meta, data)
             }).collect::<Vec<(ImageMeta, ImageData)>>();
             // temp.insert(data_key, Arc::new(md));
-            sender.send((data_key, md)).unwrap();
-            key_mark.insert(data_key, mark);
+            if !md.is_empty() {
+                sender.send((data_key, md)).unwrap();
+                key_mark.insert(data_key, mark);
+            }
+
     });
 
 }
@@ -305,7 +330,7 @@ const FILE_NUMBER_BITS: u32 = 0x7F;
 const FILE_INDEX_SHR: u32 = 0;
 const FILE_INDEX_BITS: u32 = 0x1FFFF;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Default)]
 pub struct CacheKey {
     long_key: u64,
 }

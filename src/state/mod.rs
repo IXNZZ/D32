@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use ggez::Context;
 use crate::cache::ImageCache;
 use crate::state::map::MapState;
+use crate::state::sprite::SpriteState;
 
 pub struct State {
     pub(crate) base_dir: PathBuf,
@@ -18,6 +19,7 @@ pub struct State {
     pub(crate) initialled: bool,
     pub(crate) cache: ImageCache,
     pub(crate) map: MapState,
+    pub(crate) sprite: SpriteState,
 }
 
 impl State {
@@ -38,6 +40,7 @@ impl State {
             initialled: false,
             cache: ImageCache::new(base_dir.join("data")),
             map: MapState::new(&base_dir),
+            sprite: SpriteState::default(),
         }
     }
 }
