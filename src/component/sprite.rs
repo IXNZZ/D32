@@ -1,13 +1,13 @@
 use ggez::Context;
 use ggez::glam::vec2;
-use ggez::graphics::{Canvas, Color, Drawable, DrawMode, DrawParam, Mesh, Rect, StrokeOptions, Text};
+use ggez::graphics::{BlendComponent, BlendFactor, BlendMode, BlendOperation, Canvas, Color, Drawable, DrawMode, DrawParam, Image, Mesh, Rect, ScreenImage, StrokeOptions, Text};
 use crate::cache::CacheKey;
 use crate::component::{Controller, Draw, Layer};
 use crate::state::sprite::SpriteState;
 use crate::state::State;
 
 pub struct SpriteComponent{
-
+    image: Image,
 }
 
 impl SpriteComponent {
@@ -17,7 +17,7 @@ impl SpriteComponent {
         state.sprite = SpriteState::new_test(state);
 
         // end code
-        Self {}
+        Self {image: ScreenImage::new(_ctx, None, 1.0, 1.0, 1).image(_ctx)}
     }
 
     fn draw_image(&self, canvas: &mut Canvas, state: &mut State, layer: i32, key: CacheKey, rel_x: f32, rel_y: f32) {
@@ -26,7 +26,7 @@ impl SpriteComponent {
             let image_height = image.image().height() as f32;
             if let Some(meta) = image.meta(key.get_meta_key()) {
                 let param = DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
-                    .dest(vec2(rel_x + meta.offset_x, rel_y + meta.offset_y));
+                    .dest(vec2(rel_x + meta.offset_x, rel_y + meta.offset_y)).z(layer);
                 // println!("draw sprite");
                 image.image().draw(canvas, param);
             }
@@ -44,19 +44,37 @@ impl Controller for SpriteComponent {
 impl Draw for SpriteComponent {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer) {
         // let sprite = &state.sprite;
-        let rel_x = state.sprite.abs_point_x - state.map.sprite_abs_x + state.center_x;
-        let rel_y = state.sprite.abs_point_y - state.map.sprite_abs_y + state.center_y;
+        let mut sprite_canvas = Canvas::from_image(ctx, self.image.clone(), Color::new(0.0, 0.0, 0.0, 0.0));
+        sprite_canvas.set_blend_mode(BlendMode {
+            color: BlendComponent {
+                src_factor: BlendFactor::SrcAlpha,
+                dst_factor: BlendFactor::Dst,
+                operation: BlendOperation::Add,
+            },
+            alpha: BlendComponent {
+                src_factor: BlendFactor::OneMinusDstAlpha,
+                dst_factor: BlendFactor::Dst,
+                operation: BlendOperation::Add,
+            },
+        });
+        let rel_x = state.sprite.abs_point_x - state.map.sprite_abs_x + state.center_x / 1.5 - 24.;
+        let rel_y = state.sprite.abs_point_y - state.map.sprite_abs_y + state.center_y / 1.5 - 16.;
         let key = state.sprite.dress();
+        let layer = (state.sprite.map_x + 1) * 1024 - 512;
         // println!("sprite draw: {:?}", key);
-        self.draw_image(canvas, state, 300, key, rel_x, rel_y);
+        self.draw_image(&mut sprite_canvas, state, layer + 1, key, rel_x, rel_y);
         let key = state.sprite.hair();
-        self.draw_image(canvas, state, 300, key, rel_x, rel_y);
-        // let key = state.sprite.effect();
-        // self.draw_image(canvas, state, 300, key, rel_x, rel_y);
-        // let key = state.sprite.weapon();
-        // self.draw_image(canvas, state, 300, key, rel_x, rel_y);
+        self.draw_image(&mut sprite_canvas, state, layer + 2, key, rel_x, rel_y);
+        let key = state.sprite.effect();
+        self.draw_image(&mut sprite_canvas, state, layer + 3, key, rel_x, rel_y);
+        let key = state.sprite.weapon();
+        self.draw_image(&mut sprite_canvas, state, layer + 4, key, rel_x, rel_y);
+        sprite_canvas.finish(ctx).unwrap();
+
+        canvas.draw(&self.image, DrawParam::default().z(layer));
+        // canvas.draw(&self.image, DrawParam::default().z(layer));
         // let key = state.sprite.weapon_effect();
-        // self.draw_image(canvas, state, 300, key, rel_x, rel_y);
+        // self.draw_image(canvas, state, layer, key, rel_x, rel_y);
 
         // if let Some(image) = state.cache.get(&key.get_data_key()) {
         //     let image_width = image.image().width() as f32;

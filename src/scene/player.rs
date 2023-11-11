@@ -1,7 +1,7 @@
 use ggez::{Context, GameError};
 use ggez::event::MouseButton;
 use ggez::glam::vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, Image, ScreenImage};
+use ggez::graphics::{BlendComponent, BlendFactor, BlendMode, BlendOperation, Canvas, Color, DrawParam, Image, ScreenImage};
 use ggez::mint::Vector2;
 use crate::component::{Controller, Draw, Event, Layer};
 use crate::component::debug::DebugComponent;
@@ -50,9 +50,21 @@ impl AppEventHandler<GameError> for PlayerScene {
         let mut object_canvas = Canvas::from_image(ctx, self.object_image.clone(), Color::new(0., 0., 0., 0.));
         self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapTile);
         self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapMiddle);
+        object_canvas.set_blend_mode(BlendMode {
+            color: BlendComponent {
+                src_factor: BlendFactor::SrcAlpha,
+                dst_factor: BlendFactor::One,
+                operation: BlendOperation::Add,
+            },
+            alpha: BlendComponent {
+                src_factor: BlendFactor::OneMinusDstAlpha,
+                dst_factor: BlendFactor::One,
+                operation: BlendOperation::Add,
+            },
+        });
 
-        self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
         self.sprite_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
+        self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
 
         map_canvas.finish(ctx)?;
         object_canvas.finish(ctx)?;
@@ -60,8 +72,8 @@ impl AppEventHandler<GameError> for PlayerScene {
 
 
         let mut canvas = Canvas::from_frame(ctx, Color::new(0., 0., 0., 0.));
-        canvas.draw(&self.map_image, DrawParam::default().scale(vec2(1.0, 1.0)));
-        canvas.draw(&self.object_image, DrawParam::default().scale(vec2(1.0, 1.0)));
+        canvas.draw(&self.map_image, DrawParam::default().scale(vec2(1.5, 1.5)));
+        canvas.draw(&self.object_image, DrawParam::default().scale(vec2(1.5, 1.5)));
         // canvas.draw(&self.map_image, DrawParam::default());
         self.debug_component.draw(ctx, &mut canvas, state, Layer::Debug);
         canvas.finish(ctx)?;

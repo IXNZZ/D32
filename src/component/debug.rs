@@ -26,7 +26,7 @@ impl DebugComponent {
 
 impl Draw for DebugComponent {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer) {
-        if ctx.time.ticks() % 100 == 0 {
+        if ctx.time.ticks() % 10 == 0 {
             let t = format!("当前地图: {} 当前位置: {:03}|{:03} 鼠标: {:04.0}|{:04.0} FPS: {:.2}",
                             state.map.map_title, state.map.sprite_tile_x, state.map.sprite_tile_y, self.mouse_x, self.mouse_y, ctx.time.fps()
             );

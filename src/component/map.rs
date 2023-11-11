@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ggez::Context;
 use ggez::event::MouseButton;
 use ggez::glam::{vec2};
-use ggez::graphics::{BlendMode, Canvas, DrawParam, InstanceArray, Rect, Text};
+use ggez::graphics::{BlendMode, Canvas, Color, Drawable, DrawMode, DrawParam, FillOptions, InstanceArray, Mesh, Rect, StrokeOptions, Text};
 use crate::asset::Tile;
 use crate::cache::{CacheDataKey, CacheKey, CacheMetaKey, ImageMeta, ImageValue};
 use crate::component::{Controller, Draw, Event, Layer};
@@ -54,8 +54,8 @@ impl MapComponent {
         let map = &mut state.map;
         let max_width = self.max_tile_width + 4;
         let max_height = self.max_tile_height + 12;
-        let start_x = map.sprite_tile_x - self.max_tile_width / 2 - 2;
-        let start_y = map.sprite_tile_y - self.max_tile_height / 2 - 2;
+        let start_x = map.sprite_tile_x - self.max_tile_width / 2 + 2;
+        let start_y = map.sprite_tile_y - self.max_tile_height / 2 + 4;
         // println!("start: {}|{}, tile: {}|{}", start_x, start_y, map.sprite_tile_x, map.sprite_tile_y);
         let mut sets: Vec<MapTileSet> = Vec::new();
         for w in 0..max_width {
@@ -122,7 +122,10 @@ impl MapComponent {
         let offset = |_meta: &ImageMeta| -> f32 {
             0.
         };
-        self.draw_map(ctx, state, canvas, back_data_key, filter, meta_key, offset);
+        let layer = |t: &MapTileSet| -> i32 {
+            10
+        };
+        self.draw_map(ctx, state, canvas, back_data_key, filter, meta_key, offset, layer);
 
     }
 
@@ -139,7 +142,10 @@ impl MapComponent {
         let offset = |_meta: &ImageMeta| -> f32 {
             0.
         };
-        self.draw_map(ctx, state, canvas, middle_data_key, filter, meta_key, offset);
+        let layer = |t: &MapTileSet| -> i32 {
+            11
+        };
+        self.draw_map(ctx, state, canvas, middle_data_key, filter, meta_key, offset, layer);
     }
 
     pub fn draw_objects(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas) {
@@ -155,15 +161,33 @@ impl MapComponent {
         let offset = |meta: &ImageMeta| -> f32 {
             meta.height as f32
         };
+
+        let layer = |t: &MapTileSet| -> i32 {
+            (t.tile_x + 1) * 1024
+        };
         // self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
 
         // canvas.set_blend_mode(BlendMode::ADD);
         // let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
         //     value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame != 0
         // };
-        // self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
-        let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
-
+        // let rel_offset_x = 48. - (map.sprite_abs_x as i32 % 48) as f32 + -3. * 48.;
+        // let rel_offset_y = 32. - (map.sprite_abs_y as i32 % 32) as f32 + -3. * 32.;
+        self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset, layer);
+        // let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
+        // let rect = Rect::new(0.0, 0.0, 48.0, 32.0);
+        // let mesh = Mesh::new_rectangle(ctx, DrawMode::Stroke(StrokeOptions::default().with_line_width(2.0)), rect, Color::RED).unwrap();
+        // self.current_tile_set.iter().for_each(|tile| {
+        //     let text = Text::new(format!("{}\n{}", tile.tile_x, tile.tile_y));
+        //     let color = if tile.tile.objects & 0x8000 > 0 || tile.tile.middle & 0x8000 > 0 || tile.tile.back & 0x8000 > 0 {
+        //         Color::GREEN
+        //     } else {
+        //         Color::RED
+        //     };
+        //
+        //     // mesh.draw(canvas, DrawParam::default().dest(vec2(tile.x + rel_offset_x, tile.y + rel_offset_y)).color(color));
+        //     // text.draw(canvas, DrawParam::default().dest(vec2(tile.x + rel_offset_x, tile.y + rel_offset_y)).color(color));
+        // })
 
 
         // let middle_data_key = CacheKey::build_data_key(map.map_data_id, map.map_data_number + 1, 2);
@@ -186,10 +210,11 @@ impl MapComponent {
 
     }
 
-    pub fn draw_map<F, M, S>(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas, data_key: CacheDataKey, filter: F, meta_key: M, offset: S)
+    pub fn draw_map<F, M, S, LA>(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas, data_key: CacheDataKey, filter: F, meta_key: M, offset: S, layer: LA)
         where F: Fn(&Arc<ImageValue>, &MapTileSet) -> bool,
               M: Fn(&MapTileSet) -> CacheMetaKey,
         S: Fn(&ImageMeta) -> f32,
+        LA: Fn(&MapTileSet) -> i32,
     {
         let map = &mut state.map;
         let cache = &mut state.cache;
@@ -197,7 +222,7 @@ impl MapComponent {
         let rel_offset_y = 32. - (map.sprite_abs_y as i32 % 32) as f32;
         let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
         if let Some(value) = cache.get(&data_key) {
-            let mut array = InstanceArray::new(ctx, value.image());
+            let mut array = InstanceArray::new_ordered(ctx, value.image());
             let image_width = value.image().width() as f32;
             let image_height = value.image().height() as f32;
             array.set(self.current_tile_set
@@ -208,7 +233,7 @@ impl MapComponent {
                     // let text = Text::new(format!("{}|{}\n{}|{}", meta.src_x, meta.src_y, meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y));
                     // canvas.draw(&text, DrawParam::default().dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta))));
                     DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
-                        .dest(vec2(t.x + rel_offset_x, t.y + rel_offset_y - offset(meta)))
+                        .dest(vec2(t.x + rel_offset_x, t.y + rel_offset_y - offset(meta))).z(layer(t))
                 }));
             canvas.draw(&array, dest);
         }

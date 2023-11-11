@@ -87,12 +87,13 @@ impl MapState {
         // println!("move cur: {}|{}, new: {}|{}", self.sprite_abs_x, self.sprite_abs_y, abs_x, abs_y);
 
         if tile_x != self.sprite_tile_x || tile_y != self.sprite_tile_y {
-            let point = tile_x * self.map_height + tile_y;
-            let tile = &self.tiles[point as usize];
-            if (tile.middle & 0x8000) == 0x8000 || (tile.objects & 0x8000 == 0x8000) || (tile.back & 0x8000 == 0x8000) {
-                println!("tile: {:?}", tile);
-                return;
-            }
+
+            // let point = tile_x * self.map_height + tile_y;
+            // let tile = &self.tiles[point as usize];
+            // if (tile.middle & 0x8000) == 0x8000 || (tile.objects & 0x8000 == 0x8000) || (tile.back & 0x8000 == 0x8000) {
+            //     println!("tile: {:?}", tile);
+            //     return;
+            // }
             // println!("tile {}|{} sprite: {}|{}", tile_x, tile_y, self.sprite_tile_x, self.sprite_tile_y);
             self.sprite_tile_x = tile_x;
             self.sprite_tile_y = tile_y;
@@ -106,6 +107,14 @@ impl MapState {
         let start = Point2::new(self.sprite_abs_x, self.sprite_abs_y);
         let finish = Point2::new(self.sprite_abs_x + rel_offset_x, self.sprite_abs_y + rel_offset_y);
         // println!("easing start: {:?}, finish: {:?}", start, finish);
+        let tile_x = ((self.sprite_abs_x + rel_offset_x) / 48.) as i32;
+        let tile_y = ((self.sprite_abs_y + rel_offset_y) / 32.) as i32;
+        let point = tile_x * self.map_height + tile_y;
+        let tile = &self.tiles[point as usize];
+        if (tile.middle & 0x8000) > 0 || (tile.objects & 0x8000 > 0) || (tile.back & 0x8000 > 0) {
+            // println!("tile: {:?}", tile);
+            return;
+        }
         self.easing = Easing::once_finish(start, finish, 0.8);
     }
 

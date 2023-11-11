@@ -130,6 +130,10 @@ impl<T: CanTween + Clone + Default> Easing<T> {
         self.sequence.now()
     }
 
+    // pub fn finish(&self) -> T {
+    //     // self.sequence.
+    // }
+
 }
 
 fn angle(src_x: f32, src_y: f32, dst_x: f32, dst_y: f32) -> f32 {
