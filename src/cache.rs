@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::{sync, thread};
+use std::fmt::{Debug, Formatter};
 use std::ops::Not;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -86,6 +87,10 @@ impl ImageValue {
     pub fn meta(&self, key: CacheMetaKey) -> Option<&ImageMeta> {
         self.meta.get(&key)
     }
+
+    pub fn all(&self) -> &HashMap<u32, ImageMeta> {
+        &self.meta
+    }
 }
 
 pub type CacheDataKey = u32;
@@ -140,7 +145,7 @@ impl ImageCache {
         names.insert(3, String::from("objects"));
         names.insert(4, String::from("hum"));
         names.insert(5, String::from("hair"));
-        names.insert(6, String::from("effect"));
+        names.insert(6, String::from("humEffect"));
         names.insert(7, String::from("weapon"));
         names.insert(8, String::from("weaponEffect"));
         names.insert(9, String::from("magic"));
@@ -189,7 +194,7 @@ impl ImageCache {
                 meta_image.insert(meta.key.get_meta_key(), meta.clone());
             });
             canvas.finish(ctx).unwrap();
-            println!("data_id: {}, data_number: {}, count: {}, ", data_key, data_key, meta_image.len());
+            // println!("data_id: {}, data_number: {}, count: {}, ", data_key, data_key, meta_image.len());
             self.key_image.insert(data_key, Arc::new(ImageValue { image, meta: meta_image}));
         });
     }
@@ -210,6 +215,8 @@ fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
     let mut key_vec: Vec<CacheKey> = Vec::new();
     for key in keys {
         for count in 0..key.get_data_count() {
+            let key = CacheKey::from_cache(key.get_data_key(), key.get_meta_key(), 1);
+            // println!("cache key: {:?}", key.as_inc_index(count));
             key_vec.push(key.as_inc_index(count));
         }
     }
@@ -223,6 +230,7 @@ fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
         .group_by(|k|k.get_data_key())
         .into_iter()
         .for_each(|(data_key, group)| {
+
             let mut mark = if key_mark.contains_key(&data_key) {
                 key_mark.get(&data_key).unwrap()
             } else {
@@ -231,12 +239,16 @@ fn draw_image<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>,
             let md = group.filter(|key| !is_exists(key)).map(|key| {
                 let data = load_image0(index, key, names, data_dir);
                 let meta = mark.update(key, &data);
+                // if key.get_data_id() == 2 {
+                //     println!("data_key: {:?}", key);
+                //     // println!("")
+                // }
                 (meta, data)
             }).collect::<Vec<(ImageMeta, ImageData)>>();
             // temp.insert(data_key, Arc::new(md));
             if !md.is_empty() {
-                sender.send((data_key, md)).unwrap();
                 key_mark.insert(data_key, mark);
+                sender.send((data_key, md)).unwrap();
             }
 
     });
@@ -255,12 +267,13 @@ fn load_image0<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey
 
     if !index.contains_key(&key.get_idx_key()) {
         let path = get_file_name(&data_dir, path.as_str(), key.get_file_number(), data_type);
+
         if path.is_none() {
             error!("按类型映射文件类型出错(0,1,2): {}", data_type);
             return ImageData::default();
         }
         let path = path.unwrap();
-        if key.get_idx_key() == 1 {
+        if key.get_data_type() == 1 {
             index.insert(key.get_idx_key(), asset::read_index(path));
         } else {
             index.insert(key.get_idx_key(), asset::read_wzx(path));
@@ -276,7 +289,7 @@ fn load_image0<T: AsRef<Path>>(index: &mut HashMap<u32, Vec<u32>>, key: CacheKey
     let vec = index.get(&key.get_idx_key()).unwrap();
     let start = vec.get(file_idx);
     let end = vec.get(file_idx + 1);
-
+    // println!("index: {}, start: {:?}, end: {:?}", file_idx, start, end);
     if start.is_some() {
         let end = if end.is_some() && data_type == 1 {
             *end.unwrap()
@@ -330,9 +343,18 @@ const FILE_NUMBER_BITS: u32 = 0x7F;
 const FILE_INDEX_SHR: u32 = 0;
 const FILE_INDEX_BITS: u32 = 0x1FFFF;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Default)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Default)]
 pub struct CacheKey {
     long_key: u64,
+}
+
+impl Debug for CacheKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CacheKey(data_id: {}, data_number: {}, data_count: {}, data_type: {}, file_id: {}, file_number: {}, file_index: {})",
+            self.get_data_id(), self.get_data_number(), self.get_data_count(), self.get_data_type(),
+            self.get_file_id(), self.get_file_number(), self.get_file_index()
+        )
+    }
 }
 
 impl CacheKey {
@@ -340,6 +362,7 @@ impl CacheKey {
         Self { long_key }
     }
 
+    // date_type 1:idx, 2: wzx, 3: wzl
     pub fn from(data_id: u32, data_number: u32, data_type: u32, data_count: u32, file_id: u32, file_number: u32, file_index: u32) -> Self {
         let data_key = (data_id & DATA_ID_BITS) << 23 | (data_number & DATA_NUMBER_BITS) << 13 | (data_type & DATA_TYPE_BITS) << 10 | (data_count & DATA_COUNT_BITS);
         let meta_key = (file_id & FILE_ID_BITS) << FILE_ID_SHR | (file_number & FILE_NUMBER_BITS) << FILE_NUMBER_SHR | file_index & FILE_INDEX_BITS;

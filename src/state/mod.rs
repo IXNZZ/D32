@@ -1,5 +1,5 @@
-mod map;
-mod sprite;
+pub mod map;
+pub mod sprite;
 
 use std::path::PathBuf;
 use ggez::Context;

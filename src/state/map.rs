@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use tracing::error;
 use crate::asset;
 use crate::asset::Tile;
-use crate::easing::{Easing, Point2};
+use crate::easing::{Direction, Easing, Point2};
 
 // #[derive(Default)]
 pub struct MapState {
@@ -85,8 +85,15 @@ impl MapState {
         let tile_x = (abs_x / 48.) as i32;
         let tile_y = (abs_y / 32.) as i32;
         // println!("move cur: {}|{}, new: {}|{}", self.sprite_abs_x, self.sprite_abs_y, abs_x, abs_y);
+
         if tile_x != self.sprite_tile_x || tile_y != self.sprite_tile_y {
-            println!("tile {}|{} sprite: {}|{}", tile_x, tile_y, self.sprite_tile_x, self.sprite_tile_y);
+            let point = tile_x * self.map_height + tile_y;
+            let tile = &self.tiles[point as usize];
+            if (tile.middle & 0x8000) == 0x8000 || (tile.objects & 0x8000 == 0x8000) || (tile.back & 0x8000 == 0x8000) {
+                println!("tile: {:?}", tile);
+                return;
+            }
+            // println!("tile {}|{} sprite: {}|{}", tile_x, tile_y, self.sprite_tile_x, self.sprite_tile_y);
             self.sprite_tile_x = tile_x;
             self.sprite_tile_y = tile_y;
             self.reload = true
@@ -98,35 +105,33 @@ impl MapState {
     pub fn easing_by_point(&mut self, rel_offset_x: f32, rel_offset_y: f32) {
         let start = Point2::new(self.sprite_abs_x, self.sprite_abs_y);
         let finish = Point2::new(self.sprite_abs_x + rel_offset_x, self.sprite_abs_y + rel_offset_y);
-        println!("easing start: {:?}, finish: {:?}", start, finish);
-        self.easing = Easing::once_finish(start, finish, 0.5);
+        // println!("easing start: {:?}, finish: {:?}", start, finish);
+        self.easing = Easing::once_finish(start, finish, 0.8);
     }
 
-    pub fn walk_by_direction(&mut self, dir_for_8: u8) {
-        match dir_for_8 {
-            1 => { self.easing_by_point(0.0, -32.0) },
-            2 => { self.easing_by_point(48.0, -32.0) },
-            3 => { self.easing_by_point(48.0, 0.0) },
-            4 => { self.easing_by_point(48.0, 32.0) },
-            5 => { self.easing_by_point(0.0, 32.0) },
-            6 => { self.easing_by_point(-48.0, 32.0) },
-            7 => { self.easing_by_point(-48.0, 0.0) },
-            8 => { self.easing_by_point(-48.0, -32.0) },
-            _ => {}
+    pub fn walk_by_direction(&mut self, dir: Direction) {
+        match dir {
+            Direction::North => { self.easing_by_point(0.0, -32.0) },
+            Direction::Northeast => { self.easing_by_point(48.0, -32.0) },
+            Direction::East => { self.easing_by_point(48.0, 0.0) },
+            Direction::Southeast => { self.easing_by_point(48.0, 32.0) },
+            Direction::South => { self.easing_by_point(0.0, 32.0) },
+            Direction::Southwest => { self.easing_by_point(-48.0, 32.0) },
+            Direction::West => { self.easing_by_point(-48.0, 0.0) },
+            Direction::Northwest => { self.easing_by_point(-48.0, -32.0) },
         }
     }
 
-    pub fn run_by_direction(&mut self, dir_for_8: u8) {
-        match dir_for_8 {
-            1 => { self.easing_by_point(0.0, -64.0) },
-            2 => { self.easing_by_point(96.0, -64.0) },
-            3 => { self.easing_by_point(96.0, 0.0) },
-            4 => { self.easing_by_point(96.0, 64.0) },
-            5 => { self.easing_by_point(0.0, 64.0) },
-            6 => { self.easing_by_point(-96.0, 64.0) },
-            7 => { self.easing_by_point(-96.0, 0.0) },
-            8 => { self.easing_by_point(-96.0, -64.0) },
-            _ => {}
+    pub fn run_by_direction(&mut self, dir: Direction) {
+        match dir {
+            Direction::North => { self.easing_by_point(0.0, -64.0) },
+            Direction::Northeast => { self.easing_by_point(96.0, -64.0) },
+            Direction::East => { self.easing_by_point(96.0, 0.0) },
+            Direction::Southeast => { self.easing_by_point(96.0, 64.0) },
+            Direction::South => { self.easing_by_point(0.0, 64.0) },
+            Direction::Southwest => { self.easing_by_point(-96.0, 64.0) },
+            Direction::West => { self.easing_by_point(-96.0, 0.0) },
+            Direction::Northwest => { self.easing_by_point(-96.0, -64.0) },
         }
     }
 }

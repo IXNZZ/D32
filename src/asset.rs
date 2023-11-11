@@ -77,7 +77,7 @@ impl ImageData {
         let length = body.get_u32_le();
 
         if length == 0 {
-            let bytes = if data.len() > 0 {
+            let bytes = if data.len() > 0 && width > 0 && height > 0 {
                 Bytes::from(byte_to_rgba(pixel, width as usize, height as usize, data))
             } else { Bytes::new() };
             Self { width, height, offset_x, offset_y, bytes }
@@ -158,6 +158,7 @@ pub fn read_index<P: AsRef<Path> + Debug>(path: P) -> Vec<u32> {
     for _ in 0..len {
         result.push(data.get_u32_le());
     }
+    // println!("index file 0: {:?}", result[0]);
     result
 }
 

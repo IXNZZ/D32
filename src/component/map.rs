@@ -8,7 +8,7 @@ use crate::asset::Tile;
 use crate::cache::{CacheDataKey, CacheKey, CacheMetaKey, ImageMeta, ImageValue};
 use crate::component::{Controller, Draw, Event, Layer};
 use crate::easing;
-use crate::easing::EasingStatus;
+use crate::easing::{Direction, EasingStatus, PlayerAction};
 use crate::state::State;
 
 #[derive(Debug)]
@@ -31,7 +31,7 @@ pub struct MapComponent {
     max_tile_height: i32,
     current_tile_set: Vec<MapTileSet>,
     mouse_button_down: bool,
-    direction: u8,
+    direction: Direction,
     move_type: u8,
 }
 
@@ -44,7 +44,7 @@ impl MapComponent {
             max_tile_height: window_height as i32 / 32 + 1,
             current_tile_set: Vec::new(),
             mouse_button_down: false,
-            direction: 0,
+            direction: Direction::North,
             move_type: 0,
         }
     }
@@ -155,13 +155,35 @@ impl MapComponent {
         let offset = |meta: &ImageMeta| -> f32 {
             meta.height as f32
         };
-        self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
+        // self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
 
         // canvas.set_blend_mode(BlendMode::ADD);
         // let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
         //     value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame != 0
         // };
         // self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset);
+        let dest = DrawParam::default().dest(vec2(-3. * 48., -3. * 32.));
+
+
+
+        // let middle_data_key = CacheKey::build_data_key(map.map_data_id, map.map_data_number + 1, 2);
+        // if let Some(value) = state.cache.get(&middle_data_key) {
+        //     let mut array = InstanceArray::new(ctx, value.image());
+        //     let image_width = value.image().width() as f32;
+        //     let image_height = value.image().height() as f32;
+        //     array.set(self.current_tile_set
+        //         .iter()
+        //         .filter(|t|filter(&value, *t))
+        //         .map(|t| {
+        //             let meta = value.meta(meta_key(t)).unwrap();
+        //             // let text = Text::new(format!("{}|{}\n{}|{}", meta.src_x, meta.src_y, meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y));
+        //             // canvas.draw(&text, DrawParam::default().dest(vec2(meta.offset_x + t.x + rel_offset_x, meta.offset_y + t.y + rel_offset_y - offset(meta))));
+        //             DrawParam::default().src(Rect::new(meta.src_x / image_width, meta.src_y / image_height, meta.width as f32 / image_width, meta.height as f32 / image_height))
+        //                 .dest(vec2(t.x + rel_offset_x, t.y + rel_offset_y - offset(meta)))
+        //         }));
+        //     canvas.draw(&array, dest);
+        // }
+
     }
 
     pub fn draw_map<F, M, S>(&mut self, ctx: &mut Context, state: &mut State, canvas: &mut Canvas, data_key: CacheDataKey, filter: F, meta_key: M, offset: S)
@@ -214,14 +236,28 @@ impl Controller for MapComponent {
                 let point2 = state.map.easing.now();
                 state.map.move_by_pixel(point2.x, point2.y);
                 // println!("easing {}|{}, status: {:?}", point2.x, point2.y, state.map.easing.status());
+                // state.sprite.dir(self.direction);
+                // if self.move_type == 2 {
+                //     state.sprite.action(PlayerAction::Run);
+                // } else if self.move_type == 1 {
+                //     state.sprite.action(PlayerAction::Walk);
+                // }
+                state.sprite.move_tile(state.map.sprite_tile_x, state.map.sprite_tile_y);
+                state.sprite.abs_point_x = state.map.sprite_abs_x;
+                state.sprite.abs_point_y = state.map.sprite_abs_y;
             },
             _ => {
                 if self.mouse_button_down {
+                    state.sprite.dir(self.direction);
                     if self.move_type == 2 {
                         state.map.run_by_direction(self.direction);
+                        // state.sprite.action(PlayerAction::Run);
                     } else if self.move_type == 1 {
                         state.map.walk_by_direction(self.direction);
+                        // state.sprite.action(PlayerAction::Walk);
                     }
+                } else {
+                    state.sprite.action(PlayerAction::Stand);
                 }
             }
         }
@@ -236,14 +272,18 @@ impl Event for MapComponent {
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32, state: &mut State) {
         self.mouse_button_down = true;
         let angle = easing::angle8(state.center_x, state.center_y, x, y);
-        self.direction = angle as u8;
+        self.direction = angle;
         match button {
             MouseButton::Left => {
                 self.move_type = 1;
+                state.sprite.dir(self.direction);
+                state.sprite.action(PlayerAction::Walk);
                 // state.map.walk_by_direction(self.direction);
             }
             MouseButton::Right => {
                 self.move_type = 2;
+                state.sprite.dir(self.direction);
+                state.sprite.action(PlayerAction::Run);
                 // state.map.run_by_direction(self.direction);
             }
             _ => {}
@@ -256,7 +296,7 @@ impl Event for MapComponent {
 
     fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32, state: &mut State) {
         if self.mouse_button_down {
-            let angle = easing::angle8(state.center_x, state.center_y, x, y) as u8;
+            let angle = easing::angle8(state.center_x, state.center_y, x, y);
             if angle != self.direction {
                 self.direction = angle;
             }

@@ -51,8 +51,8 @@ impl AppEventHandler<GameError> for PlayerScene {
         self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapTile);
         self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapMiddle);
 
-        self.sprite_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
         self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
+        self.sprite_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
 
         map_canvas.finish(ctx)?;
         object_canvas.finish(ctx)?;
@@ -60,8 +60,8 @@ impl AppEventHandler<GameError> for PlayerScene {
 
 
         let mut canvas = Canvas::from_frame(ctx, Color::new(0., 0., 0., 0.));
-        canvas.draw(&self.map_image, DrawParam::default().scale(vec2(1.5, 1.5)));
-        canvas.draw(&self.object_image, DrawParam::default().scale(vec2(1.5, 1.5)));
+        canvas.draw(&self.map_image, DrawParam::default().scale(vec2(1.0, 1.0)));
+        canvas.draw(&self.object_image, DrawParam::default().scale(vec2(1.0, 1.0)));
         // canvas.draw(&self.map_image, DrawParam::default());
         self.debug_component.draw(ctx, &mut canvas, state, Layer::Debug);
         canvas.finish(ctx)?;
