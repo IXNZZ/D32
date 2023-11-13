@@ -48,20 +48,9 @@ impl AppEventHandler<GameError> for PlayerScene {
         // self.map.draw_tile()
         let mut map_canvas = Canvas::from_image(ctx, self.map_image.clone(), Color::new(0., 0., 0., 0.));
         let mut object_canvas = Canvas::from_image(ctx, self.object_image.clone(), Color::new(0., 0., 0., 0.));
-        self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapTile);
-        self.map_component.draw(ctx, &mut map_canvas, state, Layer::MapMiddle);
-        object_canvas.set_blend_mode(BlendMode {
-            color: BlendComponent {
-                src_factor: BlendFactor::SrcAlpha,
-                dst_factor: BlendFactor::One,
-                operation: BlendOperation::Add,
-            },
-            alpha: BlendComponent {
-                src_factor: BlendFactor::OneMinusDstAlpha,
-                dst_factor: BlendFactor::One,
-                operation: BlendOperation::Add,
-            },
-        });
+        self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapTile);
+        self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapMiddle);
+
 
         self.sprite_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);
         self.map_component.draw(ctx, &mut object_canvas, state, Layer::MapObjects);

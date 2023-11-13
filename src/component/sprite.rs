@@ -45,33 +45,30 @@ impl Draw for SpriteComponent {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, state: &mut State, layer: Layer) {
         // let sprite = &state.sprite;
         let mut sprite_canvas = Canvas::from_image(ctx, self.image.clone(), Color::new(0.0, 0.0, 0.0, 0.0));
-        sprite_canvas.set_blend_mode(BlendMode {
-            color: BlendComponent {
-                src_factor: BlendFactor::SrcAlpha,
-                dst_factor: BlendFactor::Dst,
-                operation: BlendOperation::Add,
-            },
-            alpha: BlendComponent {
-                src_factor: BlendFactor::OneMinusDstAlpha,
-                dst_factor: BlendFactor::Dst,
-                operation: BlendOperation::Add,
-            },
-        });
+        // sprite_canvas.set_blend_mode(BlendMode::ALPHA);
         let rel_x = state.sprite.abs_point_x - state.map.sprite_abs_x + state.center_x / 1.5 - 24.;
         let rel_y = state.sprite.abs_point_y - state.map.sprite_abs_y + state.center_y / 1.5 - 16.;
-        let key = state.sprite.dress();
-        let layer = (state.sprite.map_x + 1) * 1024 - 512;
+        let layer = (state.sprite.map_x + 1) * 1024 + 512;
         // println!("sprite draw: {:?}", key);
+        let key = state.sprite.dress();
         self.draw_image(&mut sprite_canvas, state, layer + 1, key, rel_x, rel_y);
         let key = state.sprite.hair();
         self.draw_image(&mut sprite_canvas, state, layer + 2, key, rel_x, rel_y);
-        let key = state.sprite.effect();
-        self.draw_image(&mut sprite_canvas, state, layer + 3, key, rel_x, rel_y);
+
         let key = state.sprite.weapon();
         self.draw_image(&mut sprite_canvas, state, layer + 4, key, rel_x, rel_y);
         sprite_canvas.finish(ctx).unwrap();
 
+        canvas.set_blend_mode(BlendMode::ADD);
+        let key = state.sprite.effect();
+        self.draw_image(canvas, state, layer + 3 + 0x200000, key, rel_x, rel_y);
+
+        canvas.set_blend_mode(BlendMode::ALPHA);
         canvas.draw(&self.image, DrawParam::default().z(layer));
+
+        canvas.set_blend_mode(BlendMode::ADD);
+        canvas.draw(&self.image, DrawParam::default().z(layer + 0x200000));
+
         // canvas.draw(&self.image, DrawParam::default().z(layer));
         // let key = state.sprite.weapon_effect();
         // self.draw_image(canvas, state, layer, key, rel_x, rel_y);
