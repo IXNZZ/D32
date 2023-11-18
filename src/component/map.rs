@@ -159,14 +159,14 @@ impl MapComponent {
         canvas.set_blend_mode(BlendMode::ALPHA);
         let arr: Vec<i32> = self.current_tile_set.iter()
             .filter(|x| {x.tile.frame == 0})
-            .map(|x| {x.tile_x})
+            .map(|x| {x.tile_y})
             .unique().collect();
-
-            arr.iter().for_each(|k| {
-            let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
-                value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame == 0 && tile.tile_x == *k
-            };
-            self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset, (*k + 1) * 1024);
+        // println!("arr: {}", arr.len());
+        arr.iter().for_each(|k| {
+        let filter = |value: &Arc<ImageValue>, tile: &MapTileSet| -> bool {
+            value.meta(tile.object_key.get_meta_key()).is_some() && tile.tile.frame == 0 && tile.tile_y == *k
+        };
+        self.draw_map(ctx, state, canvas, object_data_key, filter, meta, offset, (*k + 1) * 1024);
         });
 
         // let layer = |t: &MapTileSet| -> i32 {
@@ -281,9 +281,13 @@ impl Controller for MapComponent {
                 if self.mouse_button_down {
                     state.sprite.dir(self.direction);
                     if self.move_type == 2 {
+                        // state.sprite.dir(self.direction);
+                        state.sprite.action(PlayerAction::Run);
                         state.map.run_by_direction(self.direction);
                         // state.sprite.action(PlayerAction::Run);
                     } else if self.move_type == 1 {
+                        // state.sprite.dir(self.direction);
+                        state.sprite.action(PlayerAction::Walk);
                         state.map.walk_by_direction(self.direction);
                         // state.sprite.action(PlayerAction::Walk);
                     }
@@ -307,14 +311,14 @@ impl Event for MapComponent {
         match button {
             MouseButton::Left => {
                 self.move_type = 1;
-                state.sprite.dir(self.direction);
-                state.sprite.action(PlayerAction::Walk);
+                // state.sprite.dir(self.direction);
+                // state.sprite.action(PlayerAction::Walk);
                 // state.map.walk_by_direction(self.direction);
             }
             MouseButton::Right => {
                 self.move_type = 2;
-                state.sprite.dir(self.direction);
-                state.sprite.action(PlayerAction::Run);
+                // state.sprite.dir(self.direction);
+                // state.sprite.action(PlayerAction::Run);
                 // state.map.run_by_direction(self.direction);
             }
             _ => {}

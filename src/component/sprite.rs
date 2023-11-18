@@ -48,7 +48,7 @@ impl Draw for SpriteComponent {
         // sprite_canvas.set_blend_mode(BlendMode::ALPHA);
         let rel_x = state.sprite.abs_point_x - state.map.sprite_abs_x + state.center_x / 1.5 - 24.;
         let rel_y = state.sprite.abs_point_y - state.map.sprite_abs_y + state.center_y / 1.5 - 16.;
-        let layer = (state.sprite.map_x + 1) * 1024 + 512;
+        let layer = (state.sprite.map_y + 2) * 1024 + 512;
         // println!("sprite draw: {:?}", key);
         let key = state.sprite.dress();
         self.draw_image(&mut sprite_canvas, state, layer + 1, key, rel_x, rel_y);
@@ -56,7 +56,7 @@ impl Draw for SpriteComponent {
         self.draw_image(&mut sprite_canvas, state, layer + 2, key, rel_x, rel_y);
 
         let key = state.sprite.weapon();
-        self.draw_image(&mut sprite_canvas, state, layer + 4, key, rel_x, rel_y);
+        self.draw_image(&mut sprite_canvas, state, layer + 1, key, rel_x, rel_y);
         sprite_canvas.finish(ctx).unwrap();
 
         canvas.set_blend_mode(BlendMode::ADD);
