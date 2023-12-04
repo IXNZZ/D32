@@ -27,7 +27,7 @@ pub struct MainScene {
 impl MainScene {
     pub fn new(ctx: &mut Context, state: &mut State) -> Self {
         state.initialled = true;
-        MainScene {scene: Box::new(PlayerScene::new(ctx, state))}
+        MainScene {scene: Box::new(LoadingScene::new(ctx, state))}
     }
 
     pub fn switch_scene(&mut self, _ctx: &mut Context, _state: &mut State, scene: Box<dyn AppEventHandler>) {
@@ -36,11 +36,18 @@ impl MainScene {
 }
 
 impl AppEventHandler<GameError> for MainScene {
-    fn update(&mut self, _ctx: &mut Context, _state: &mut State) -> Result<(), GameError> {
-        if let Some(x) = self.scene.select(_ctx, _state) {
-            self.switch_scene(_ctx, _state, x);
+    fn update(&mut self, _ctx: &mut Context, state: &mut State) -> Result<(), GameError> {
+        if let Some(x) = self.scene.select(_ctx, state) {
+            self.switch_scene(_ctx, state, x);
         }
-        self.scene.update(_ctx, _state)
+        for _ in 0..10 {
+            if let Some(cmd) = state.net.recv_command() {
+                let _ = self.scene.net(_ctx, state, cmd);
+                continue;
+            }
+            break;
+        }
+        self.scene.update(_ctx, state)
     }
 
     fn draw(&mut self, _ctx: &mut Context, _state: &mut State) -> Result<(), GameError> {

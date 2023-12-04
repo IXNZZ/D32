@@ -18,6 +18,7 @@ mod app;
 mod event;
 mod net;
 mod state;
+mod input;
 
 struct LocalTimer;
 
@@ -29,7 +30,7 @@ impl FormatTime for LocalTimer {
 
 fn main() -> GameResult {
     if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "error,D32=info,map_dist=debug")
+        std::env::set_var("RUST_LOG", "error,D32=debug,map_dist=debug")
     }
     tracing_subscriber::fmt::fmt()
         .with_timer(LocalTimer)
@@ -42,6 +43,13 @@ fn main() -> GameResult {
     } else {
         path::PathBuf::from("./")
     };
+
+    let addr = if let Ok(addr) = env::var("NET_ADDRESS") {
+        addr
+    } else {
+        String::from("127.0.0.1:8999")
+    };
+
     info!("RUN DIR: {:?}", resource_dir);
     let cb = ggez::ContextBuilder::new("D32", "iX")
         .add_resource_path(resource_dir.clone())
@@ -50,7 +58,7 @@ fn main() -> GameResult {
 
     let (mut ctx, event_loop) = cb.build()?;
 
-    let mut state = State::new(resource_dir, &mut ctx);
+    let mut state = State::new(resource_dir, addr.as_str(), &mut ctx);
 
     let mut app = app::App::new(&mut ctx, &mut state);
 

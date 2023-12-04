@@ -18,8 +18,9 @@ ggez = { version = "0.9.3" }
 itertools = "0.11"
 pathfinding = "4.3.2"
 futures-util = {version = "0.3.29", features = ["io-compat", "sink"] }
-tokio = { version = "1.28.1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "io-std", "io-util"] }
+tokio = { version = "1.28.1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "io-std", "io-util", "net"] }
 tokio-util = { version = "0.7.10", features = ["codec"]}
+crossbeam = "0.8"
 directories-next = "2"
 anyhow = "1.0.22"
 serde = "1.0.192"

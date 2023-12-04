@@ -4,6 +4,7 @@ use ggez::input::keyboard::{KeyCode, KeyInput, KeyMods};
 use ggez::winit::dpi;
 use ggez::winit::event::{ElementState, Event, Ime, KeyboardInput, MouseScrollDelta, WindowEvent};
 use tracing::{debug, error};
+use crate::net::command::Command;
 use crate::state::State;
 
 /// Runs the game's main loop, calling event callbacks on the given state
@@ -348,6 +349,10 @@ pub trait AppEventHandler<E = GameError>
 
     fn select(&mut self, _ctx: &mut Context, _state: &mut State) -> Option<Box<dyn AppEventHandler>> {
         None
+    }
+
+    fn net(&mut self, _ctx: &mut Context, _state: &mut State, cmd: Command) -> Result<bool, E> {
+        Ok(false)
     }
 
     /// Called upon each logic update to the game.
